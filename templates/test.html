@@ -43,10 +43,13 @@
                 
                 if (data.error) {
                     log.innerHTML += `\n[ERROR] ${data.error}`;
-                } else {
-                    log.innerHTML += `\n[AI DECISION] Tool: ${data.status}`;
-                    log.innerHTML += `\n[AI REASONING] "${data.ai_thought}"`;
-                    if(data.output) log.innerHTML += `\n[RESULT] ${data.output}`;
+                }
+                else {
+                    log.innerHTML += `\n[AI DECISION] Tool: ${data.decision?.tool ?? 'N/A'}`;
+                    log.innerHTML += `\n[AI REASONING] "${data.decision?.thought ?? 'N/A'}"`;
+                    if (data.execution_result !== undefined) {
+                        log.innerHTML += `\n[RESULT] ${data.execution_result}`;
+                    }
                 }
                 log.scrollTop = log.scrollHeight;
                 

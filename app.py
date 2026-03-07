@@ -1,14 +1,15 @@
 from flask import Flask, render_template, jsonify, request
 import simulation
-import tools
+import agent.tools as tools
 import requests 
 import json
+from agent.executor import run_agent
 
 app = Flask(__name__)
 
 # !!! UPDATE THIS TO YOUR PARTNER'S URL !!!
 # Example: "http://192.168.1.5:8000/analyze_network"
-PARTNER_AI_URL = "http://localhost:5000/api/post_solution" 
+ACTIVE_PROBLEMS = "http://localhost:5000/api/run_agent"
 
 # --- Pages ---
 @app.route('/')
@@ -20,7 +21,36 @@ def test_page(): return render_template('test.html')
 @app.route('/admin')
 def admin_page(): return render_template('admin.html')
 
+
 # --- APIs ---
+@app.route("/api/active_symptoms")
+def active_symptoms():
+
+    data = simulation.get_live_data()
+
+    return jsonify({
+        "telemetry": {
+            "latency": data["latency"],
+            "packet_loss": data["packet_loss"],
+            "throughput": data["throughput"],
+            "device_health": data["device_health"],
+            "routing_status": data["routing_status"]
+        }
+    })
+
+@app.route("/api/run_agent", methods=["POST"])
+def run_agent_endpoint():
+
+    result = run_agent()
+
+    thought = result["decision"].get("thought")
+    tool = result["decision"].get("tool")
+    risk = result["decision"].get("risk")
+
+    simulation.log_ai_action(thought, tool, risk, "Executed")
+
+    return jsonify(result)
+
 @app.route('/api/status')
 def get_status():
     return jsonify(simulation.get_live_data())
@@ -46,46 +76,20 @@ def trigger_scenario():
     # B. Gather the "Bad" Data
     data = simulation.get_live_data() 
     
-    # C. Prepare Payload (Raw JSON)
-    # This is exactly what your partner will receive
-    payload = {
-        "telemetry": {
-            "latency": data['latency'],
-            "packet_loss": data['packet_loss'],
-            "throughput": data['throughput'],
-            "device_health": data['device_health'],
-            "routing_status": data['routing_status']
-        },
-        "available_tools": list(tools.AVAILABLE_TOOLS.keys())
-    }
-
-    # D. Send to Partner
+    # D. Run the local AI agent
     try:
-        # Sending the POST request
-        response = requests.post(PARTNER_AI_URL, json=payload, timeout=5)
-        
-        # Expecting Partner to return: {"tool": "name", "risk": 0-100, "thought": "..."}
-        ai_response = response.json() 
-        
-        # E. Execute their decision
-        tool_name = ai_response.get("tool")
-        risk = ai_response.get("risk", 0)
-        thought = ai_response.get("thought", "External AI Decision")
+        result = run_agent()
 
-        if tool_name in tools.AVAILABLE_TOOLS:
-            if risk > 50:
-                status = "Pending Approval"
-                simulation.log_ai_action(thought, tool_name, risk, status)
-                return jsonify({"status": "Queued", "message": "High risk action queued."})
-            else:
-                result = tools.AVAILABLE_TOOLS[tool_name]()
-                simulation.log_ai_action(thought, tool_name, risk, "Executed")
-                return jsonify({"status": "Executed", "output": result, "ai_thought": thought})
-        else:
-            return jsonify({"error": f"AI suggested unknown tool: {tool_name}"})
+        decision = result["decision"]
 
-    except requests.exceptions.ConnectionError:
-        return jsonify({"error": "Partner AI is offline. Check URL."})
+        tool_name = decision.get("tool")
+        thought = decision.get("thought")
+        risk = decision.get("risk")
+
+        simulation.log_ai_action(thought, tool_name, risk, "Executed")
+
+        return jsonify(result)
+
     except Exception as e:
         return jsonify({"error": str(e)})
 
