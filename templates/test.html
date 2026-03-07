@@ -1,42 +1,130 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Chaos Console</title>
+    <title>Test</title>
     <style>
-        body { background-color: #222; color: white; font-family: sans-serif; padding: 20px; text-align: center;}
-        .btn-group { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
-        button { padding: 20px 30px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; color: white; font-size: 16px; transition: transform 0.1s; }
-        button:active { transform: scale(0.95); }
-        .red { background: linear-gradient(145deg, #c0392b, #a93226); }
-        .orange { background: linear-gradient(145deg, #e67e22, #d35400); }
-        .purple { background: linear-gradient(145deg, #8e44ad, #732d91); }
+        body { background-color: #000000; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 20px; text-align: center;}
         
-        #console-log { background: #111; border: 1px solid #444; padding: 20px; margin-top: 30px; font-family: monospace; color: #00ff00; white-space: pre-wrap; text-align: left; height: 200px; overflow-y: auto; }
+        /* Dynamic Button Grid */
+        .problem-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 20px; 
+            max-width: 1000px; 
+            margin: 0 auto; 
+        }
+
+        .problem-card {
+            background: #1a1a1a;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-align: left;
+        }
+
+        .problem-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .problem-card:active { transform: scale(0.98); }
+
+        .card-title { font-size: 18px; font-weight: bold; margin-bottom: 5px; display: block; }
+        .card-desc { font-size: 13px; color: #aaa; margin-bottom: 15px; display: block; }
+        
+        /* Parameter Tags */
+        .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+        .tag { 
+            background: rgba(255,255,255,0.1); 
+            padding: 2px 8px; 
+            border-radius: 4px; 
+            font-size: 11px; 
+            color: #ddd; 
+            font-family: monospace;
+        }
+
+        /* Color Themes (applied dynamically) */
+        .theme-red { border-color: #c0392b; }
+        .theme-red .card-title { color: #e74c3c; }
+        
+        .theme-orange { border-color: #d35400; }
+        .theme-orange .card-title { color: #e67e22; }
+        
+        .theme-purple { border-color: #8e44ad; }
+        .theme-purple .card-title { color: #9b59b6; }
+
+        #console-log { 
+            background: #1a1a1a; padding: 20px; 
+            margin-top: 40px; font-family: monospace; color: #00ff00; 
+            white-space: pre-wrap; text-align: left; height: 250px; overflow-y: auto;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
-    <h1>Chaos Engineering Console</h1>
-    <div class="btn-group">
-        <button class="orange" onclick="runScenario('congestion')">Simulate Congestion</button>
-        <button class="red" onclick="runScenario('ddos_attack')">Simulate DDoS</button>
-        <button class="purple" onclick="runScenario('firmware_corruption')">Corrupt Firmware</button>
-        <button class="red" style="background:#34495e" onclick="runScenario('fiber_cut')">Cut Fiber Cable</button>
+    <h1 style="border-bottom: 1px solid #333; padding-bottom: 10px; text-align: left;">PROBLEM CREATOR</h1>
+
+    <div id="problem-container" class="problem-grid">
+        <p>Loading Scenarios...</p>
     </div>
 
-    <h3>System Logs</h3>
-    <div id="console-log">System Ready. Waiting for user input...</div>
+    <h3 style="border-bottom: 1px solid #333; padding-bottom: 10px; text-align: left;">System Logs</h3>
+    <div id="console-log">System Ready.</div>
 
     <script>
-        async function runScenario(problem) {
+        // 1. Fetch Problem Config on Load
+        async function loadProblems() {
+            try {
+                const res = await fetch('/api/problems');
+                const catalog = await res.json();
+                const container = document.getElementById('problem-container');
+                container.innerHTML = ''; // Clear loading text
+
+                // 2. Generate Buttons Dynamically
+                for (const [id, data] of Object.entries(catalog)) {
+                    // Determine simplified color class
+                    let colorClass = 'theme-orange'; // default
+                    if (data.color.includes('red')) colorClass = 'theme-red';
+                    if (data.color.includes('purple')) colorClass = 'theme-purple';
+
+                    // Generate Tags HTML
+                    const tagsHtml = Object.keys(data.effects)
+                        .map(effect => `<span class="tag">${effect}</span>`)
+                        .join('');
+
+                    // Create Card HTML
+                    const card = document.createElement('div');
+                    card.className = `problem-card ${colorClass}`;
+                    card.style.borderColor = data.color; // override with exact color
+                    card.innerHTML = `
+                        <span class="card-title" style="color:${data.color}">${data.name}</span>
+                        <span class="card-desc">${data.description}</span>
+                        <div class="tags">${tagsHtml}</div>
+                    `;
+                    
+                    // Attach Click Event
+                    // !!! IMPORTANT: Passing TWO arguments now (ID and Name) !!!
+                    card.onclick = () => runScenario(id, data.name);
+                    container.appendChild(card);
+                }
+
+            } catch (e) {
+                document.getElementById('problem-container').innerHTML = "Error loading problems.";
+                console.error(e);
+            }
+        }
+
+        // !!! FIXED FUNCTION SIGNATURE !!!
+        async function runScenario(problemId, problemName) {
             const log = document.getElementById('console-log');
-            log.innerHTML += `\n> Injecting fault: ${problem}...`;
+            
+            // Log the pretty name (e.g. "Network Congestion")
+            log.innerHTML += `\n> Injecting fault: ${problemName}...`;
             log.innerHTML += `\n> Gathering JSON Telemetry...`;
             
             try {
+                // Send the ID (e.g. "congestion") to the backend
                 const res = await fetch('/api/trigger_scenario', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({problem: problem})
+                    body: JSON.stringify({problem: problemId})
                 });
                 
                 const data = await res.json();
@@ -57,6 +145,9 @@
                 log.innerHTML += `\n[FATAL] Connection Failed: ${err}`;
             }
         }
+        
+        // Initialize
+        loadProblems();
     </script>
 </body>
 </html>

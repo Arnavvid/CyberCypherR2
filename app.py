@@ -21,6 +21,11 @@ def test_page(): return render_template('test.html')
 @app.route('/admin')
 def admin_page(): return render_template('admin.html')
 
+@app.route('/api/problems')
+def get_problems():
+    """Returns the list of available chaos scenarios to the frontend."""
+    return jsonify(simulation.PROBLEM_CATALOG)
+
 
 # --- APIs ---
 @app.route("/api/active_symptoms")

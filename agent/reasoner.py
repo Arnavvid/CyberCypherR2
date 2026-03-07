@@ -32,24 +32,32 @@ def run_analysis(observed_data: dict):
     AVAILABLE TOOLS:
     [{tools_list_str}]
 
+    --- NORMAL VALUES ---
+
+    1. Latency: 20-30
+    2. Packet Loss: 0-1.0
+    3. Throughput: 800-900
+    4. Device Health Integrity: SYSTEM OPTIMAL
+    5. Routing Status: STABLE
+
     --- DIAGNOSTIC LOGIC (FOLLOW STRICTLY) ---
     
-    1. CHECK FOR FIBER CUT (Priority #1):
-       - RULE: Is Throughput == 0 OR Packet Loss == 100%?
+    1. CHECK FOR FIBER CUT:
+       - RULE: ONLY IF Throughput == 0 OR Packet Loss == 100%?
        - DIAGNOSIS: Fiber Cut (Hard Down).
        - ACTION: 'escalate_to_engineers'.
 
-    2. CHECK FOR DDoS ATTACK (Priority #2):
+    2. CHECK FOR DDoS ATTACK:
        - RULE: Is Throughput > 2000 Mbps? (Normal is ~850).
        - DIAGNOSIS: DDoS Attack (Volumetric).
        - ACTION: 'enable_ddos_protection' OR 'apply_rate_limiting'.
 
-    3. CHECK FOR FIRMWARE FAILURE (Priority #3):
+    3. CHECK FOR FIRMWARE FAILURE:
        - RULE: Is Device Health 'Critical' OR Routing Status 'Flapping'?
        - DIAGNOSIS: Firmware Corruption.
        - ACTION: 'rollback_firmware'.
 
-    4. CHECK FOR CONGESTION (Priority #4):
+    4. CHECK FOR CONGESTION:
        - RULE: Is Latency > 100ms BUT Throughput is normal (<1500)?
        - DIAGNOSIS: Network Congestion.
        - ACTION: 'reroute_traffic' OR 'deploy_load_balancer'.
