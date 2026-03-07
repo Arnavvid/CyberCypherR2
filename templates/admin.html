@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Governance</title>
+    <style>
+        body { background-color: #0f0f0f; color: #ddd; font-family: monospace; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #333; padding: 10px; text-align: left; }
+        th { background-color: #222; }
+        .high-risk { color: #ff4444; }
+        .low-risk { color: #44ff44; }
+    </style>
+</head>
+<body>
+    <h1>Autonomous Agent Decisions</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Reasoning (Hypothesis)</th>
+                <th>Proposed Action</th>
+                <th>Risk Score</th>
+                <th>Status</th>
+                <th>Controls</th>
+            </tr>
+        </thead>
+        <tbody id="logTable">
+            </tbody>
+    </table>
+
+    <script>
+        async function fetchLogs() {
+            const res = await fetch('/api/logs');
+            const logs = await res.json();
+            const tbody = document.getElementById('logTable');
+            tbody.innerHTML = ''; // Clear table
+
+            logs.forEach(log => {
+                const row = `<tr>
+                    <td>${log.timestamp}</td>
+                    <td>${log.thought}</td>
+                    <td>${log.action}</td>
+                    <td class="${log.risk > 50 ? 'high-risk' : 'low-risk'}">${log.risk}</td>
+                    <td>${log.status}</td>
+                    <td>
+                        ${log.status === 'Pending Approval' ? '<button>Approve</button>' : '-'}
+                    </td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+        setInterval(fetchLogs, 2000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Neurotech Status</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #0d0d0d; color: #e0e0e0; font-family: 'Segoe UI', monospace; padding: 20px; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .card { background: #1a1a1a; padding: 15px; border-radius: 10px; border: 1px solid #333; }
+        
+        h2 { margin-top: 0; font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        
+        /* Health Bar */
+        .health-container { width: 100%; background-color: #333; height: 25px; border-radius: 4px; overflow: hidden; margin-top: 10px;}
+        .health-bar { height: 100%; width: 100%; background-color: #00ff00; transition: all 0.5s; text-align: center; line-height: 25px; color: black; font-weight: bold; font-size: 12px;}
+
+        /* Badges */
+        .badge { padding: 5px 15px; border-radius: 4px; font-weight: bold; display: inline-block; font-size: 14px; }
+        .badge-green { background: rgba(0, 255, 0, 0.1); color: #00ff00; border: 1px solid #00ff00; }
+        .badge-red { background: rgba(255, 0, 64, 0.1); color: #ff0040; border: 1px solid #ff0040; box-shadow: 0 0 10px #ff0040; animation: pulse 1s infinite; }
+        
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <h1 style="border-bottom: 1px solid #333; padding-bottom: 10px;">NETWORK OBSERVABILITY LAYER</h1>
+    
+    <div class="grid">
+        <div class="card">
+            <h2>Latency (ms)</h2>
+            <canvas id="latencyChart"></canvas>
+        </div>
+        <div class="card">
+            <h2>Packet Loss (%)</h2>
+            <canvas id="lossChart"></canvas>
+        </div>
+        <div class="card">
+            <h2>Throughput (Mbps)</h2>
+            <canvas id="throughputChart"></canvas>
+        </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="card">
+            <h2>Device Health Integrity</h2>
+            <div class="health-container">
+                <div id="healthBar" class="health-bar" style="width: 100%;">100%</div>
+            </div>
+        </div>
+
+        <div class="card" style="display: flex; align-items: center; justify-content: space-between;">
+            <h2>Routing Status</h2>
+            <div id="routingBadge" class="badge badge-green">STABLE</div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const MAX_DATA_POINTS = 20; // Keeps graph clean (Scroller limit)
+
+        const commonOptions = { 
+            animation: false, 
+            responsive: true,
+            scales: { 
+                x: { 
+                    display: true, 
+                    ticks: { color: '#666', maxTicksLimit: 10 } // Prevents text crowding
+                }, 
+                y: { 
+                    grid: { color: '#333' },
+                    ticks: { color: '#888' }
+                } 
+            },
+            elements: { point: { radius: 0 } }, // Clean line without dots
+            plugins: { legend: { display: false } } // Hide legend title to save space
+        };
+
+        // --- Chart Initialization ---
+        const mkChart = (id, label, color, max) => new Chart(document.getElementById(id), {
+            type: 'line',
+            data: { 
+                labels: [], 
+                datasets: [{ 
+                    label: label, 
+                    data: [], 
+                    borderColor: color, 
+                    borderWidth: 2, 
+                    fill: true, 
+                    backgroundColor: color + '20' 
+                }] 
+            },
+            options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, suggestedMax: max } } }
+        });
+
+        const charts = {
+            latency: mkChart('latencyChart', 'Latency', '#00d2ff', 100),
+            loss: mkChart('lossChart', 'Loss', '#ff00ff', 5),
+            throughput: mkChart('throughputChart', 'Mbps', '#f1c40f', 1000)
+        };
+
+        // --- Main Update Loop ---
+        async function updateStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                
+                // Get clean time string (HH:MM:SS) to save space
+                const now = new Date().toLocaleTimeString('en-US', { hour12: false });
+
+                updateGraph(charts.latency, now, data.latency, 50, '#ff0040', '#00d2ff');
+                updateGraph(charts.loss, now, data.packet_loss, 2, '#ff0040', '#ff00ff');
+                updateGraph(charts.throughput, now, data.throughput, 5000, '#ff0040', '#f1c40f');
+
+                // Update Health & Badge
+                const hb = document.getElementById('healthBar');
+                if(data.device_health === "Critical") { 
+                    hb.style.width = "25%"; hb.style.backgroundColor = "#ff0040"; hb.innerText = "CRITICAL FAILURE"; 
+                } else { 
+                    hb.style.width = "100%"; hb.style.backgroundColor = "#00ff00"; hb.innerText = "SYSTEM OPTIMAL"; 
+                }
+
+                const rb = document.getElementById('routingBadge');
+                rb.className = (data.routing_status === "Stable") ? "badge badge-green" : "badge badge-red";
+                rb.innerText = data.routing_status.toUpperCase();
+            } catch (err) {
+                console.error("Fetch error:", err);
+            }
+        }
+
+        // --- The Fixed Scrolling Logic ---
+        function updateGraph(chart, label, value, threshold, badColor, goodColor) {
+            const labels = chart.data.labels;
+            const dataPoints = chart.data.datasets[0].data;
+
+            // 1. Add new data
+            labels.push(label);
+            dataPoints.push(value);
+
+            // 2. Remove old data if we exceed the limit (Scrolling effect)
+            if (labels.length > MAX_DATA_POINTS) {
+                labels.shift();      // Remove first label
+                dataPoints.shift();  // Remove first data point
+            }
+
+            // 3. Dynamic Coloring
+            chart.data.datasets[0].borderColor = (value > threshold) ? badColor : goodColor;
+            
+            chart.update();
+        }
+
+        setInterval(updateStatus, 1000);
+    </script>
+</body>
+</html>

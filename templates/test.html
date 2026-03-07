@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chaos Console</title>
+    <style>
+        body { background-color: #222; color: white; font-family: sans-serif; padding: 20px; text-align: center;}
+        .btn-group { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        button { padding: 20px 30px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; color: white; font-size: 16px; transition: transform 0.1s; }
+        button:active { transform: scale(0.95); }
+        .red { background: linear-gradient(145deg, #c0392b, #a93226); }
+        .orange { background: linear-gradient(145deg, #e67e22, #d35400); }
+        .purple { background: linear-gradient(145deg, #8e44ad, #732d91); }
+        
+        #console-log { background: #111; border: 1px solid #444; padding: 20px; margin-top: 30px; font-family: monospace; color: #00ff00; white-space: pre-wrap; text-align: left; height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>Chaos Engineering Console</h1>
+    <div class="btn-group">
+        <button class="orange" onclick="runScenario('congestion')">Simulate Congestion</button>
+        <button class="red" onclick="runScenario('ddos_attack')">Simulate DDoS</button>
+        <button class="purple" onclick="runScenario('firmware_corruption')">Corrupt Firmware</button>
+        <button class="red" style="background:#34495e" onclick="runScenario('fiber_cut')">Cut Fiber Cable</button>
+    </div>
+
+    <h3>System Logs</h3>
+    <div id="console-log">System Ready. Waiting for user input...</div>
+
+    <script>
+        async function runScenario(problem) {
+            const log = document.getElementById('console-log');
+            log.innerHTML += `\n> Injecting fault: ${problem}...`;
+            log.innerHTML += `\n> Gathering JSON Telemetry...`;
+            
+            try {
+                const res = await fetch('/api/trigger_scenario', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({problem: problem})
+                });
+                
+                const data = await res.json();
+                
+                if (data.error) {
+                    log.innerHTML += `\n[ERROR] ${data.error}`;
+                } else {
+                    log.innerHTML += `\n[AI DECISION] Tool: ${data.status}`;
+                    log.innerHTML += `\n[AI REASONING] "${data.ai_thought}"`;
+                    if(data.output) log.innerHTML += `\n[RESULT] ${data.output}`;
+                }
+                log.scrollTop = log.scrollHeight;
+                
+            } catch (err) {
+                log.innerHTML += `\n[FATAL] Connection Failed: ${err}`;
+            }
+        }
+    </script>
+</body>
+</html>
