@@ -16,7 +16,7 @@ network_state = {
 def get_live_data():
     base = network_state
     
-    # 1. Base Noise
+    # 1. Base Noise (Keep this)
     data = {
         "latency": max(5, base["latency"] + random.randint(-2, 2)),
         "packet_loss": max(0, base["packet_loss"] + random.uniform(-0.05, 0.05)),
@@ -26,26 +26,32 @@ def get_live_data():
         "routing_status": base["routing_status"]
     }
     
-    # 2. Apply Problem Effects
+    # 2. Apply Problem Effects (OVERRIDES)
+    
+    # Congestion adds to existing values
     if "congestion" in base["active_problems"]:
         data["latency"] += random.randint(100, 150)
         data["link_utilization"] = random.randint(95, 99)
+        data["packet_loss"] += random.uniform(1.0, 3.0) 
 
-    if "fiber_cut" in base["active_problems"]:
-        data["throughput"] = 0
-        data["packet_loss"] = 100
-        data["routing_status"] = "Unreachable"
-
+    # DDoS adds massive throughput
     if "ddos_attack" in base["active_problems"]:
-        data["throughput"] += 5000  # Massive traffic spike
+        data["throughput"] += 5000 
         data["latency"] += 300
         data["packet_loss"] += random.uniform(15, 25)
         data["link_utilization"] = 100
 
+    # Firmware sets critical flags
     if "firmware_corruption" in base["active_problems"]:
         data["device_health"] = "Critical"
         data["packet_loss"] += random.uniform(2, 8)
-        data["routing_status"] = random.choice(["Flapping", "Degraded"])
+        data["routing_status"] = "Flapping"
+
+    # Fiber Cut MUST be last to overwrite everything else with 0/100
+    if "fiber_cut" in base["active_problems"]:
+        data["throughput"] = 0        # HARD ZERO
+        data["packet_loss"] = 100     # HARD 100%
+        data["routing_status"] = "Unreachable"
 
     return data
 

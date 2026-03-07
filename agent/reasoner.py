@@ -1,72 +1,94 @@
+# agent/reasoner.py
 import json
-from pydantic import BaseModel, Field
 from langchain_ollama import ChatOllama
-from langchain.tools import StructuredTool
-from . import tools
-
+from pydantic import BaseModel, Field
+from . import tools 
 
 class ReasonerOutput(BaseModel):
-    tool: str = Field(description="Name of the tool to execute")
+    tool: str = Field(description="The exact name of the tool to use")
     thought: str = Field(description="Reasoning behind the decision")
     risk: int = Field(description="Risk level from 0 to 100")
-
-
-def build_tools(allowed_tools):
-
-    tool_objects = []
-
-    for name in allowed_tools:
-        if name in tools.AVAILABLE_TOOLS:
-
-            func = tools.AVAILABLE_TOOLS[name]
-
-            tool_objects.append(
-                StructuredTool.from_function(
-                    func=func,
-                    name=name,
-                    description=f"Network operation tool: {name}"
-                )
-            )
-
-    return tool_objects
-
 
 def run_analysis(observed_data: dict):
 
     telemetry = observed_data["telemetry"]
     allowed_tools = observed_data["available_tools"]
 
+    # 1. Setup Model
     llm = ChatOllama(
-        model="qwen3.5:9b",
+        model="qwen2.5:7b", 
         temperature=0
     )
 
-    tool_objects = build_tools(allowed_tools)
+    tools_list_str = ", ".join(f"'{t}'" for t in allowed_tools)
 
-    llm_with_tools = llm.bind_tools(tool_objects)
-
-    structured_llm = llm_with_tools.with_structured_output(ReasonerOutput)
-
+    # --- THE TUNED CHEAT SHEET ---
     prompt = f"""
-    Analyze this network telemetry and determine the most likely issue.
-
-    Telemetry:
+    You are a Network Operations AI.
+    
+    CURRENT TELEMETRY:
     {json.dumps(telemetry, indent=2)}
 
-    Choose the best tool to fix the issue.
-    Only select from the provided tools.
+    AVAILABLE TOOLS:
+    [{tools_list_str}]
 
-    Estimate risk between 0 and 100.
+    --- DIAGNOSTIC LOGIC (FOLLOW STRICTLY) ---
+    
+    1. CHECK FOR FIBER CUT (Priority #1):
+       - RULE: Is Throughput == 0 OR Packet Loss == 100%?
+       - DIAGNOSIS: Fiber Cut (Hard Down).
+       - ACTION: 'escalate_to_engineers'.
+
+    2. CHECK FOR DDoS ATTACK (Priority #2):
+       - RULE: Is Throughput > 2000 Mbps? (Normal is ~850).
+       - DIAGNOSIS: DDoS Attack (Volumetric).
+       - ACTION: 'enable_ddos_protection' OR 'apply_rate_limiting'.
+
+    3. CHECK FOR FIRMWARE FAILURE (Priority #3):
+       - RULE: Is Device Health 'Critical' OR Routing Status 'Flapping'?
+       - DIAGNOSIS: Firmware Corruption.
+       - ACTION: 'rollback_firmware'.
+
+    4. CHECK FOR CONGESTION (Priority #4):
+       - RULE: Is Latency > 100ms BUT Throughput is normal (<1500)?
+       - DIAGNOSIS: Network Congestion.
+       - ACTION: 'reroute_traffic' OR 'deploy_load_balancer'.
+
+    -----------------------------------
+
+    INSTRUCTIONS:
+    1. Go through the priorities 1 to 4 in order.
+    2. Pick the FIRST matching diagnosis.
+    3. Select the "ACTION" for that diagnosis.
+    4. You MUST pick exactly one tool from the AVAILABLE TOOLS list.
+    5. Output JSON only.
     """
 
-    result = structured_llm.invoke(prompt)
+    structured_llm = llm.with_structured_output(ReasonerOutput)
 
-    if hasattr(result, "model_dump"):
-        result_dict = result.model_dump()
-    elif isinstance(result, dict):
-        result_dict = result
-    else:
-        # Fallback if the AI hallucinates an invalid format
-        result_dict = {"tool": "escalate_to_engineers", "thought": "Parsing failed.", "risk": 100}
+    try:
+        result = structured_llm.invoke(prompt)
+        
+        # ... (Same safe conversion logic as before) ...
+        if hasattr(result, "model_dump"):
+            result_dict = result.model_dump()
+        else:
+            result_dict = result
 
-    return result_dict
+        # --- The Enforcer ---
+        selected_tool = result_dict.get("tool")
+        if selected_tool not in allowed_tools:
+            print(f"!!! SYSTEM INTERCEPTION !!! AI tried to use fake tool: '{selected_tool}'")
+            result_dict["tool"] = "escalate_to_engineers"
+            result_dict["thought"] += " [System Auto-Correction: Invalid Tool]"
+            result_dict["risk"] = 100
+
+        return result_dict
+
+    except Exception as e:
+        print(f"AI ERROR: {e}")
+        return {
+            "tool": "escalate_to_engineers", 
+            "thought": f"AI Crash: {str(e)}", 
+            "risk": 100
+        }
