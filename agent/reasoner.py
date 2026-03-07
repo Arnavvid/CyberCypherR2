@@ -61,11 +61,12 @@ def run_analysis(observed_data: dict):
 
     result = structured_llm.invoke(prompt)
 
-    result_dict = result.model_dump()
-
-    # tool_name = result_dict["tool"]
-
-    # if tool_name in tools.AVAILABLE_TOOLS:
-    #     tools.AVAILABLE_TOOLS[tool_name]()
+    if hasattr(result, "model_dump"):
+        result_dict = result.model_dump()
+    elif isinstance(result, dict):
+        result_dict = result
+    else:
+        # Fallback if the AI hallucinates an invalid format
+        result_dict = {"tool": "escalate_to_engineers", "thought": "Parsing failed.", "risk": 100}
 
     return result_dict
