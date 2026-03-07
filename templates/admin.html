@@ -78,9 +78,10 @@
                         <td><span class="${statusBadge}">${log.status.toUpperCase()}</span></td>
                         <td>
                             ${log.status === "Pending Approval"
-                            ? `<button onclick="approve('${log.action}')">Approve</button>`
+                            ? `<button onclick="approve('${log.action}')">Approve</button>
+                            <button onclick="reject('${log.action}')">Reject</button>`
                             : "-"
-                            }
+                            }}
                         </td>
                     </tr>`;
                 });
@@ -91,6 +92,13 @@
             } catch (err) {
                 console.error("Error fetching logs:", err);
             }
+        }
+        async function reject(tool) {
+            await fetch('/api/reject_action', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({tool: tool})
+            });
         }
         async function approve(tool) {
             await fetch('/api/approve_action', {

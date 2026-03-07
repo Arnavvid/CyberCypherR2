@@ -1,6 +1,7 @@
 from flask import Flask, render_template, jsonify, request
 import simulation
 import agent.tools as tools
+from agent.memory import get_tool_bias, update_memory
 import requests 
 import json
 # Import the new split functions
@@ -49,6 +50,10 @@ def run_agent_endpoint():
     thought = decision.get("thought")
     risk = decision.get("risk", 0)
 
+    # Apply reinforcement learning bias
+    bias = get_tool_bias(tool)
+    risk = max(0, min(100, risk - (bias * 10)))
+
     # 2. CHECK RISK
     if risk > RISK_THRESHOLD:
         # HIGH RISK: Stop here. Log as Pending. Do NOT execute.
@@ -86,7 +91,7 @@ def approve_action():
     if tool_name in tools.AVAILABLE_TOOLS:
         # 1. Execute the tool now
         result = execute_tool(tool_name)
-
+        update_memory(tool_name, +1)
         # 2. Find and Update the existing 'Pending' log
         # This prevents duplicate rows in the Admin panel
         found = False
@@ -105,6 +110,22 @@ def approve_action():
 
     return jsonify({"error": "Invalid tool"})
 
+
+@app.route("/api/reject_action", methods=["POST"])
+def reject_action():
+
+    data = request.json
+    tool_name = data.get("tool")
+
+    update_memory(tool_name, -1)
+
+    for log in simulation.network_state["ai_logs"]:
+        if log["action"] == tool_name and log["status"] == "Pending Approval":
+            log["status"] = "Rejected"
+            log["thought"] += " [Admin Rejected]"
+            break
+
+    return jsonify({"status": "rejected"})
 
 @app.route('/api/status')
 def get_status():
