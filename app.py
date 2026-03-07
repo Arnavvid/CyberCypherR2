@@ -5,6 +5,8 @@ import requests
 import json
 from agent.executor import run_agent
 
+RISK_THRESHOLD = 50
+
 app = Flask(__name__)
 
 # !!! UPDATE THIS TO YOUR PARTNER'S URL !!!
@@ -48,13 +50,58 @@ def run_agent_endpoint():
 
     result = run_agent()
 
-    thought = result["decision"].get("thought")
-    tool = result["decision"].get("tool")
-    risk = result["decision"].get("risk")
+    decision = result["decision"]
 
-    simulation.log_ai_action(thought, tool, risk, "Executed")
+    thought = decision.get("thought")
+    tool = decision.get("tool")
+    risk = decision.get("risk")
+
+    # HIGH RISK → require approval
+    if risk > RISK_THRESHOLD:
+
+        simulation.log_ai_action(
+            thought,
+            tool,
+            risk,
+            "Pending Approval"
+        )
+
+        return jsonify({
+            "decision": decision,
+            "execution_result": "Awaiting admin approval"
+        })
+
+    # LOW RISK → auto execute
+    simulation.log_ai_action(
+        thought,
+        tool,
+        risk,
+        "Executed"
+    )
 
     return jsonify(result)
+
+@app.route("/api/approve_action", methods=["POST"])
+def approve_action():
+
+    data = request.json
+    tool_name = data.get("tool")
+
+    if tool_name in tools.AVAILABLE_TOOLS:
+
+        result = tools.AVAILABLE_TOOLS[tool_name]()
+
+        simulation.log_ai_action(
+            "Admin approved action",
+            tool_name,
+            0,
+            "Executed"
+        )
+
+        return jsonify({"result": result})
+
+    return jsonify({"error": "Invalid tool"})
+
 
 @app.route('/api/status')
 def get_status():
