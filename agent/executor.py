@@ -2,9 +2,11 @@ from .observer import get_observed_data
 from .reasoner import run_analysis
 from . import tools
 
-
-def run_agent():
-
+def get_agent_decision():
+    """
+    Step 1: Observe and Reason.
+    Returns the decision (JSON) but DOES NOT execute the tool.
+    """
     # 1. Observe
     observed = get_observed_data()
 
@@ -13,20 +15,15 @@ def run_agent():
 
     # 3. Reason
     decision = run_analysis(observed)
+    
+    return decision
 
-    tool_name = decision.get("tool")
-
-    # 4. Execute
+def execute_tool(tool_name):
+    """
+    Step 2: Execute the tool.
+    Only called if risk is low OR admin approves.
+    """
     if tool_name in tools.AVAILABLE_TOOLS:
-
-        result = tools.AVAILABLE_TOOLS[tool_name]()
-
-        return {
-            "decision": decision,
-            "execution_result": result
-        }
-
-    return {
-        "decision": decision,
-        "execution_result": "No valid tool selected"
-    }
+        return tools.AVAILABLE_TOOLS[tool_name]()
+    
+    return "No valid tool selected"

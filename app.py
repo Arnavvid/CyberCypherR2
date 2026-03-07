@@ -3,14 +3,14 @@ import simulation
 import agent.tools as tools
 import requests 
 import json
-from agent.executor import run_agent
+# Import the new split functions
+from agent.executor import get_agent_decision, execute_tool
 
 RISK_THRESHOLD = 50
 
 app = Flask(__name__)
 
 # !!! UPDATE THIS TO YOUR PARTNER'S URL !!!
-# Example: "http://192.168.1.5:8000/analyze_network"
 ACTIVE_PROBLEMS = "http://localhost:5000/api/run_agent"
 
 # --- Pages ---
@@ -25,16 +25,11 @@ def admin_page(): return render_template('admin.html')
 
 @app.route('/api/problems')
 def get_problems():
-    """Returns the list of available chaos scenarios to the frontend."""
     return jsonify(simulation.PROBLEM_CATALOG)
 
-
-# --- APIs ---
 @app.route("/api/active_symptoms")
 def active_symptoms():
-
     data = simulation.get_live_data()
-
     return jsonify({
         "telemetry": {
             "latency": data["latency"],
@@ -47,31 +42,30 @@ def active_symptoms():
 
 @app.route("/api/run_agent", methods=["POST"])
 def run_agent_endpoint():
+    # 1. THINK: Get the decision ONLY (No execution yet)
+    decision = get_agent_decision()
 
-    result = run_agent()
-
-    decision = result["decision"]
-
-    thought = decision.get("thought")
     tool = decision.get("tool")
-    risk = decision.get("risk")
+    thought = decision.get("thought")
+    risk = decision.get("risk", 0)
 
-    # HIGH RISK → require approval
+    # 2. CHECK RISK
     if risk > RISK_THRESHOLD:
-
+        # HIGH RISK: Stop here. Log as Pending. Do NOT execute.
         simulation.log_ai_action(
             thought,
             tool,
             risk,
             "Pending Approval"
         )
-
         return jsonify({
             "decision": decision,
             "execution_result": "Awaiting admin approval"
         })
 
-    # LOW RISK → auto execute
+    # 3. LOW RISK: Execute immediately.
+    result = execute_tool(tool)
+    
     simulation.log_ai_action(
         thought,
         tool,
@@ -79,24 +73,33 @@ def run_agent_endpoint():
         "Executed"
     )
 
-    return jsonify(result)
+    return jsonify({
+        "decision": decision,
+        "execution_result": result
+    })
 
 @app.route("/api/approve_action", methods=["POST"])
 def approve_action():
-
     data = request.json
     tool_name = data.get("tool")
 
     if tool_name in tools.AVAILABLE_TOOLS:
+        # 1. Execute the tool now
+        result = execute_tool(tool_name)
 
-        result = tools.AVAILABLE_TOOLS[tool_name]()
+        # 2. Find and Update the existing 'Pending' log
+        # This prevents duplicate rows in the Admin panel
+        found = False
+        for log in simulation.network_state["ai_logs"]:
+            if log["action"] == tool_name and log["status"] == "Pending Approval":
+                log["status"] = "Executed"
+                log["thought"] += " [Admin Approved]"
+                found = True
+                break  # Update only the most recent pending one
 
-        simulation.log_ai_action(
-            "Admin approved action",
-            tool_name,
-            0,
-            "Executed"
-        )
+        if not found:
+            # Fallback if logs were cleared
+            simulation.log_ai_action("Manual Approval", tool_name, 0, "Executed")
 
         return jsonify({"result": result})
 
@@ -114,52 +117,36 @@ def get_logs():
 # --- THE TRIGGER LOGIC ---
 @app.route('/api/trigger_scenario', methods=['POST'])
 def trigger_scenario():
-    """
-    1. Injects the fault.
-    2. Gathers raw telemetry data.
-    3. POSTs raw JSON to Partner AI.
-    4. Executes Partner's response.
-    """
     problem = request.json.get('problem')
     
-    # A. Inject the problem
+    # A. Inject
     simulation.inject_problem(problem)
     
-    # B. Gather the "Bad" Data
-    data = simulation.get_live_data() 
-    
-    # D. Run the local AI agent
+    # B. Run the endpoint logic internally
+    # We call the same logic as the /api/run_agent endpoint to ensure consistency
     try:
-        result = run_agent()
-
-        decision = result["decision"]
-
+        # 1. Think
+        decision = get_agent_decision()
         tool_name = decision.get("tool")
         thought = decision.get("thought")
-        risk = decision.get("risk")
+        risk = decision.get("risk", 0)
 
+        # 2. Risk Check
         if risk > RISK_THRESHOLD:
-
-            simulation.log_ai_action(
-                thought,
-                tool_name,
-                risk,
-                "Pending Approval"
-            )
-
+            simulation.log_ai_action(thought, tool_name, risk, "Pending Approval")
             return jsonify({
                 "decision": decision,
                 "execution_result": "Awaiting admin approval"
             })
+        
+        # 3. Execute
+        result = execute_tool(tool_name)
+        simulation.log_ai_action(thought, tool_name, risk, "Executed")
 
-        simulation.log_ai_action(
-            thought,
-            tool_name,
-            risk,
-            "Executed"
-        )
-
-        return jsonify(result)
+        return jsonify({
+            "decision": decision,
+            "execution_result": result
+        })
 
     except Exception as e:
         return jsonify({"error": str(e)})
