@@ -77,7 +77,10 @@
                         <td class="${riskClass}">${log.risk}%</td>
                         <td><span class="${statusBadge}">${log.status.toUpperCase()}</span></td>
                         <td>
-                            <button onclick="approve('${log.action}')">Approve</button>
+                            ${log.status === "Pending Approval"
+                            ? `<button onclick="approve('${log.action}')">Approve</button>`
+                            : "-"
+                            }
                         </td>
                     </tr>`;
                 });

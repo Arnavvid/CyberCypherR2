@@ -138,7 +138,26 @@ def trigger_scenario():
         thought = decision.get("thought")
         risk = decision.get("risk")
 
-        simulation.log_ai_action(thought, tool_name, risk, "Executed")
+        if risk > RISK_THRESHOLD:
+
+            simulation.log_ai_action(
+                thought,
+                tool_name,
+                risk,
+                "Pending Approval"
+            )
+
+            return jsonify({
+                "decision": decision,
+                "execution_result": "Awaiting admin approval"
+            })
+
+        simulation.log_ai_action(
+            thought,
+            tool_name,
+            risk,
+            "Executed"
+        )
 
         return jsonify(result)
 
