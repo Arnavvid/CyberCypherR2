@@ -2,6 +2,7 @@
 import json
 from langchain_ollama import ChatOllama
 from pydantic import BaseModel, Field
+from .vectordb import search_similar
 from . import tools 
 
 class ReasonerOutput(BaseModel):
@@ -13,7 +14,7 @@ def run_analysis(observed_data: dict):
 
     telemetry = observed_data["telemetry"]
     allowed_tools = observed_data["available_tools"]
-
+    similar_incidents = search_similar(telemetry)
     # 1. Setup Model
     llm = ChatOllama(
         model="qwen2.5:7b", 
@@ -22,44 +23,38 @@ def run_analysis(observed_data: dict):
 
     tools_list_str = ", ".join(f"'{t}'" for t in allowed_tools)
 
-    # --- THE TUNED CHEAT SHEET ---
+    incident_context = ""
+    for i, inc in enumerate(similar_incidents):
+        incident_context += f"""
+        Incident {i+1}
+
+        Telemetry:
+        {inc['text']}
+
+        Diagnosis:
+        {inc['diagnosis']}
+
+        Tool Used:
+        {inc['tool']}
+        """
+
     prompt = f"""
     You are a Network Operations AI.
-    
-    CURRENT TELEMETRY DATA:
+
+    CURRENT TELEMETRY:
     {json.dumps(telemetry, indent=2)}
+
+    SIMILAR HISTORICAL INCIDENTS:
+    {incident_context}
 
     AVAILABLE TOOLS:
     [{tools_list_str}]
 
-    --- REFERENCE RANGES (NORMAL) ---
-    - Latency: 20-30 ms
-    - Packet Loss: 0-1%
-    - Throughput: 800-900 Mbps
-    - Device Health: "Healthy"
-
-    --- DIAGNOSTIC RULES (EVALUATE EACH) ---
-    
-    [RULE 1] DDoS CHECK
-    IF (Throughput > 2000 Mbps) -> DIAGNOSIS: DDoS -> ACTION: 'enable_ddos_protection'
-
-    [RULE 2] FIRMWARE CHECK
-    IF (Device Health == "Critical" OR Routing Status == "Flapping") -> DIAGNOSIS: Firmware Corruption -> ACTION: 'rollback_firmware'
-
-    [RULE 3] FIBER CUT CHECK
-    IF (Throughput == 0 OR Packet Loss == 100) -> DIAGNOSIS: Fiber Cut -> ACTION: 'escalate_to_engineers'
-
-    [RULE 4] CONGESTION CHECK
-    IF (Latency > 100 ms AND Throughput < 1500) -> DIAGNOSIS: Congestion -> ACTION: 'reroute_traffic'
-
-    -----------------------------------
-
     INSTRUCTIONS:
-    1. FIRST, analyze the CURRENT TELEMETRY against the REFERENCE RANGES.
-    2. SECOND, go through Rules 1-4 and find which specific condition is TRUE.
-    3. IGNORE rules where the condition is FALSE.
-    4. Select the tool corresponding to the TRUE rule.
-    5. Output valid JSON only.
+    1. Compare the CURRENT TELEMETRY with the historical incidents.
+    2. Identify the most likely network issue.
+    3. Select the correct tool to fix the issue.
+    4. Output valid JSON.
     """
 
     structured_llm = llm.with_structured_output(ReasonerOutput)
