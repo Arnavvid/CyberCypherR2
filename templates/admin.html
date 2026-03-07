@@ -30,6 +30,21 @@
         .btn-approve:hover {
             background-color: #218838; /* Darker green */
         }
+        .btn-reject {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Segoe UI', monospace;
+            margin-left: 6px;
+        }
+
+        .btn-reject:hover {
+            background-color: #c82333;
+        }
 
         .status-badge {
             padding: 4px 8px;
@@ -91,8 +106,10 @@
                 // --- APPROVE BUTTON LOGIC ---
                 let actionButton = '';
                 if (log.status === 'Pending Approval') {
-                    // Added 'btn-approve' class
-                    actionButton = `<button class="btn-approve" onclick="approve('${log.action}')">Approve</button>`;
+                    actionButton = `
+                        <button class="btn-approve" onclick="approve('${log.action}')">Approve</button>
+                        <button class="btn-reject" onclick="reject('${log.action}')">Reject</button>
+                    `;
                 }
 
                 row.innerHTML = `
@@ -112,6 +129,8 @@
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({tool: tool})
             });
+
+            fetchLogs();
         }
         async function approve(tool) {
             await fetch('/api/approve_action', {
