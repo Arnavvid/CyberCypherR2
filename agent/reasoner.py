@@ -26,50 +26,40 @@ def run_analysis(observed_data: dict):
     prompt = f"""
     You are a Network Operations AI.
     
-    CURRENT TELEMETRY:
+    CURRENT TELEMETRY DATA:
     {json.dumps(telemetry, indent=2)}
 
     AVAILABLE TOOLS:
     [{tools_list_str}]
 
-    --- NORMAL VALUES ---
+    --- REFERENCE RANGES (NORMAL) ---
+    - Latency: 20-30 ms
+    - Packet Loss: 0-1%
+    - Throughput: 800-900 Mbps
+    - Device Health: "Healthy"
 
-    1. Latency: 20-30
-    2. Packet Loss: 0-1.0
-    3. Throughput: 800-900
-    4. Device Health Integrity: SYSTEM OPTIMAL
-    5. Routing Status: STABLE
-
-    --- DIAGNOSTIC LOGIC (FOLLOW STRICTLY) ---
+    --- DIAGNOSTIC RULES (EVALUATE EACH) ---
     
-    1. CHECK FOR FIBER CUT:
-       - RULE: ONLY IF Throughput == 0 OR Packet Loss == 100%?
-       - DIAGNOSIS: Fiber Cut (Hard Down).
-       - ACTION: 'escalate_to_engineers'.
+    [RULE 1] DDoS CHECK
+    IF (Throughput > 2000 Mbps) -> DIAGNOSIS: DDoS -> ACTION: 'enable_ddos_protection'
 
-    2. CHECK FOR DDoS ATTACK:
-       - RULE: Is Throughput > 2000 Mbps? (Normal is ~850).
-       - DIAGNOSIS: DDoS Attack (Volumetric).
-       - ACTION: 'enable_ddos_protection' OR 'apply_rate_limiting'.
+    [RULE 2] FIRMWARE CHECK
+    IF (Device Health == "Critical" OR Routing Status == "Flapping") -> DIAGNOSIS: Firmware Corruption -> ACTION: 'rollback_firmware'
 
-    3. CHECK FOR FIRMWARE FAILURE:
-       - RULE: Is Device Health 'Critical' OR Routing Status 'Flapping'?
-       - DIAGNOSIS: Firmware Corruption.
-       - ACTION: 'rollback_firmware'.
+    [RULE 3] FIBER CUT CHECK
+    IF (Throughput == 0 OR Packet Loss == 100) -> DIAGNOSIS: Fiber Cut -> ACTION: 'escalate_to_engineers'
 
-    4. CHECK FOR CONGESTION:
-       - RULE: Is Latency > 100ms BUT Throughput is normal (<1500)?
-       - DIAGNOSIS: Network Congestion.
-       - ACTION: 'reroute_traffic' OR 'deploy_load_balancer'.
+    [RULE 4] CONGESTION CHECK
+    IF (Latency > 100 ms AND Throughput < 1500) -> DIAGNOSIS: Congestion -> ACTION: 'reroute_traffic'
 
     -----------------------------------
 
     INSTRUCTIONS:
-    1. Go through the priorities 1 to 4 in order.
-    2. Pick the FIRST matching diagnosis.
-    3. Select the "ACTION" for that diagnosis.
-    4. You MUST pick exactly one tool from the AVAILABLE TOOLS list.
-    5. Output JSON only.
+    1. FIRST, analyze the CURRENT TELEMETRY against the REFERENCE RANGES.
+    2. SECOND, go through Rules 1-4 and find which specific condition is TRUE.
+    3. IGNORE rules where the condition is FALSE.
+    4. Select the tool corresponding to the TRUE rule.
+    5. Output valid JSON only.
     """
 
     structured_llm = llm.with_structured_output(ReasonerOutput)
