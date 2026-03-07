@@ -25,6 +25,7 @@ def run_analysis(observed_data: dict):
 
     incident_context = ""
     for i, inc in enumerate(similar_incidents):
+        risk_score = inc.get('risk', 'Unknown')
         incident_context += f"""
         Incident {i+1}
 
@@ -36,6 +37,9 @@ def run_analysis(observed_data: dict):
 
         Tool Used:
         {inc['tool']}
+
+        Resulting Risk Score: 
+        {risk_score}
         """
 
     prompt = f"""

@@ -16,7 +16,6 @@ vectordb = Chroma(
 
 
 def telemetry_to_text(t):
-
     return f"""
     Network telemetry snapshot:
 
@@ -27,8 +26,8 @@ def telemetry_to_text(t):
     Routing Status: {t['routing_status']}
     """
 
-
-def add_incident(telemetry, diagnosis, tool):
+# --- CHANGE 1: Added 'risk' parameter ---
+def add_incident(telemetry, diagnosis, tool, risk):
 
     text = telemetry_to_text(telemetry)
 
@@ -36,7 +35,8 @@ def add_incident(telemetry, diagnosis, tool):
         page_content=text,
         metadata={
             "diagnosis": diagnosis,
-            "tool": tool
+            "tool": tool,
+            "risk": risk  # --- CHANGE 2: Store risk in metadata ---
         }
     )
 
@@ -55,7 +55,8 @@ def search_similar(telemetry, k=3):
         incidents.append({
             "text": doc.page_content,
             "diagnosis": doc.metadata["diagnosis"],
-            "tool": doc.metadata["tool"]
+            "tool": doc.metadata["tool"],
+            "risk": doc.metadata.get("risk", 0) # --- CHANGE 3: Retrieve risk ---
         })
 
     return incidents

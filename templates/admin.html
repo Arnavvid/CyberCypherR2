@@ -4,107 +4,120 @@
     <title>Admin</title>
     <style>
         body { background-color: #0f0f0f; color: #e0e0e0; font-family: 'Segoe UI', monospace; padding: 20px; }
-        
-        /* Table Styling */
         table { width: 100%; border-collapse: collapse; margin-top: 20px; border: 1px solid #333; }
         thead { background-color: #1a1a1a; }
-        th, td { border: 1px solid #333; padding: 12px; text-align: left; font-size: 14px; }
+        th, td { border: 1px solid #333; padding: 12px; text-align: left; }
         th { color: #888; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; }
         tr:nth-child(even) { background-color: #141414; }
         tr:hover { background-color: #1f1f1f; }
-
-        /* Risk Colors */
+        
         .risk-high { color: #ff4444; font-weight: bold; }
         .risk-med { color: #ffbb33; font-weight: bold; }
         .risk-low { color: #00C851; font-weight: bold; }
 
-        /* Status Badges */
-        .status-executed { background: rgba(0, 200, 81, 0.2); color: #00C851; padding: 2px 8px; border-radius: 4px; font-size: 11px; border: 1px solid #00C851; }
-        .status-pending { background: rgba(255, 187, 51, 0.2); color: #ffbb33; padding: 2px 8px; border-radius: 4px; font-size: 11px; border: 1px solid #ffbb33; }
+        /* --- NEW CSS FOR BUTTONS AND STATUS --- */
+        .btn-approve {
+            background-color: #28a745; /* Green */
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Segoe UI', monospace;
+            transition: background-color 0.2s;
+        }
+        .btn-approve:hover {
+            background-color: #218838; /* Darker green */
+        }
 
-        .refresh-note { font-size: 12px; color: #666; margin-top: 5px; }
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+        .status-executed {
+            background-color: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+        .status-pending {
+            background-color: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid #ffc107;
+        }
     </style>
 </head>
 <body>
-    <h1 style="border-bottom: 1px solid #333; padding-bottom: 10px;">NETWORK STATUS OBSERVER</h1>
-
+    <h1 style="border-bottom: 1px solid #333; padding-bottom: 10px;">AUTONOMOUS AGENT DECISIONS</h1>
+    
     <table>
         <thead>
             <tr>
-                <th style="width: 100px;">Time</th>
-                <th>Reasoning (Hypothesis)</th>
-                <th>Proposed Action</th>
-                <th style="width: 80px;">Risk</th>
-                <th style="width: 100px;">Status</th>
-                <th style="width: 80px;">Controls</th>
+                <th>Time</th>
+                <th>Reasoning</th>
+                <th>Action</th>
+                <th>Risk</th>
+                <th>Status</th>
+                <th>Controls</th>
             </tr>
         </thead>
-        <tbody id="logTable">
-            </tbody>
+        <tbody id="logTable"></tbody>
     </table>
 
     <script>
         async function fetchLogs() {
-            try {
-                // 1. Fetch data
-                const res = await fetch('/api/logs');
-                const logs = await res.json();
-                
-                // Debug: Check console to see if data arrived
-                console.log("Logs received:", logs); 
+            const res = await fetch('/api/logs');
+            const logs = await res.json();
+            const tbody = document.getElementById('logTable');
+            tbody.innerHTML = ''; 
 
-                const tbody = document.getElementById('logTable');
+            logs.forEach(log => {
+                const row = document.createElement('tr');
                 
-                // 2. Build HTML String (Better performance than += loop)
-                if (logs.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#666;">No decisions recorded yet. (Did the server restart?)</td></tr>';
-                    return;
+                // Risk Coloring
+                let riskClass = 'risk-low';
+                if(log.risk > 40) riskClass = 'risk-med';
+                if(log.risk > 70) riskClass = 'risk-high';
+
+                // --- STATUS BADGE LOGIC ---
+                let statusClass = log.status === 'Executed' ? 'status-executed' : 'status-pending';
+                // Wrap status text in a styled span
+                let statusBadge = `<span class="status-badge ${statusClass}">${log.status}</span>`;
+
+                // --- APPROVE BUTTON LOGIC ---
+                let actionButton = '';
+                if (log.status === 'Pending Approval') {
+                    // Added 'btn-approve' class
+                    actionButton = `<button class="btn-approve" onclick="approve('${log.action}')">Approve</button>`;
                 }
 
-                let html = '';
-                logs.forEach(log => {
-                    // Determine Color Classes
-                    let riskClass = 'risk-low';
-                    if(log.risk > 40) riskClass = 'risk-med';
-                    if(log.risk > 70) riskClass = 'risk-high';
-
-                    let statusBadge = log.status === 'Executed' ? 'status-executed' : 'status-pending';
-
-                    html += `<tr>
-                        <td style="color:#888">${log.timestamp}</td>
-                        <td style="color:#ccc">${log.thought}</td>
-                        <td style="color:#fff; font-weight:bold;">${log.action}</td>
-                        <td class="${riskClass}">${log.risk}%</td>
-                        <td><span class="${statusBadge}">${log.status.toUpperCase()}</span></td>
-                        <td>
-                            ${log.status === "Pending Approval"
-                            ? `<button onclick="approve('${log.action}')">Approve</button>`
-                            : "-"
-                            }
-                        </td>
-                    </tr>`;
-                });
-
-                // 3. Update DOM once
-                tbody.innerHTML = html;
-
-            } catch (err) {
-                console.error("Error fetching logs:", err);
-            }
+                row.innerHTML = `
+                    <td style="color:#888">${log.timestamp}</td>
+                    <td style="color:#ccc">${log.thought}</td>
+                    <td style="font-weight:bold">${log.action}</td>
+                    <td class="${riskClass}">${log.risk}%</td>
+                    <td>${statusBadge}</td>
+                    <td>${actionButton}</td>
+                `;
+                tbody.appendChild(row);
+            });
         }
+
         async function approve(tool) {
             await fetch('/api/approve_action', {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({tool: tool})
             });
+            fetchLogs(); // Refresh immediately
         }
 
-        // Run immediately on load (Don't wait 2 seconds)
+        setInterval(fetchLogs, 1000);
         fetchLogs();
-        
-        // Then poll
-        setInterval(fetchLogs, 2000);
     </script>
 </body>
 </html>
