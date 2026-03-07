@@ -116,8 +116,8 @@
             const log = document.getElementById('console-log');
             
             // Log the pretty name (e.g. "Network Congestion")
-            log.innerHTML += `\n> Injecting fault: ${problemName}...`;
-            log.innerHTML += `\n> Gathering JSON Telemetry...`;
+            log.innerHTML += `<br><br> <span style="color:#ff5555; font-weight:bold;">> Injecting fault: ${problemName}...</span>`; 
+            log.innerHTML += `<br> <span style="color:#ffff55;">> Gathering JSON Telemetry...</span>`;
             
             try {
                 // Send the ID (e.g. "congestion") to the backend
