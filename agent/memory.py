@@ -7,7 +7,10 @@ MEMORY_FILE = "agent_memory.json"
 
 def load_memory():
     if not os.path.exists(MEMORY_FILE):
-        return {}
+        mem = {}
+        save_memory(mem)
+        return mem
+
     with open(MEMORY_FILE, "r") as f:
         return json.load(f)
 
@@ -93,3 +96,6 @@ def get_tool_bias(telemetry, tool):
     Returns a bias value in [0,1] (success ratio) derived from historical data.
     """
     return get_tool_score(telemetry, tool)
+
+
+load_memory()
