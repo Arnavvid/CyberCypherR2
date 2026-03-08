@@ -2,12 +2,10 @@ from langchain_chroma import Chroma
 from langchain_ollama import OllamaEmbeddings
 from langchain_core.documents import Document
 
-# Embedding model (via Ollama)
 embeddings = OllamaEmbeddings(
     model="mxbai-embed-large"
 )
 
-# Persistent vector database
 vectordb = Chroma(
     collection_name="network_incidents",
     embedding_function=embeddings,
@@ -26,7 +24,6 @@ def telemetry_to_text(t):
     Routing Status: {t['routing_status']}
     """
 
-# --- CHANGE 1: Added 'risk' parameter ---
 def add_incident(telemetry, diagnosis, tool, risk):
 
     text = telemetry_to_text(telemetry)
@@ -36,7 +33,7 @@ def add_incident(telemetry, diagnosis, tool, risk):
         metadata={
             "diagnosis": diagnosis,
             "tool": tool,
-            "risk": risk  # --- CHANGE 2: Store risk in metadata ---
+            "risk": risk
         }
     )
 
@@ -56,7 +53,7 @@ def search_similar(telemetry, k=3):
             "text": doc.page_content,
             "diagnosis": doc.metadata["diagnosis"],
             "tool": doc.metadata["tool"],
-            "risk": doc.metadata.get("risk", 0) # --- CHANGE 3: Retrieve risk ---
+            "risk": doc.metadata.get("risk", 0)
         })
 
     return incidents

@@ -3,10 +3,8 @@ import time
 import json
 import os
 
-# --- LOAD CONFIGURATION FROM JSON ---
 def load_problem_catalog():
     try:
-        # Construct path to dummy/problems.json
         base_dir = os.path.dirname(os.path.abspath(__file__))
         json_path = os.path.join(base_dir, 'dummy', 'problems.json')
         
@@ -16,10 +14,8 @@ def load_problem_catalog():
         print(f"Error loading problems.json: {e}")
         return {}
 
-# Load catalog once at startup
 PROBLEM_CATALOG = load_problem_catalog()
 
-# Global State
 network_state = {
     "latency": 25,
     "packet_loss": 0.05,
@@ -34,7 +30,6 @@ network_state = {
 def get_live_data():
     base = network_state
     
-    # 1. Start with Base Random Noise
     data = {
         "latency": max(5, base["latency"] + random.randint(-2, 2)),
         "packet_loss": max(0, base["packet_loss"] + random.uniform(-0.05, 0.05)),
@@ -44,7 +39,6 @@ def get_live_data():
         "routing_status": "Stable"
     }
 
-    # 2. Dynamic Rules Engine (Apply Catalog Effects)
     for problem_id in base["active_problems"]:
         if problem_id in PROBLEM_CATALOG:
             effects = PROBLEM_CATALOG[problem_id]["effects"]
@@ -53,7 +47,6 @@ def get_live_data():
                 if isinstance(value, str):
                     data[param] = value
                 else:
-                    # Accumulate numeric values
                     if param in ["link_utilization", "packet_loss"]:
                         data[param] = min(100, max(0, data[param] + value))
                     elif param == "throughput":
@@ -61,10 +54,9 @@ def get_live_data():
                     else:
                         data[param] += value
 
-    # 3. FINAL OVERRIDES (The "Hard Truth" Logic)
     if "fiber_cut" in base["active_problems"]:
-        data["throughput"] = 0        # Force Hard Down
-        data["packet_loss"] = 100     # Force Total Loss
+        data["throughput"] = 0
+        data["packet_loss"] = 100
         data["routing_status"] = "Unreachable"
 
     if "firmware_corruption" in base["active_problems"]:

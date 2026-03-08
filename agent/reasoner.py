@@ -1,4 +1,3 @@
-# agent/reasoner.py
 import json
 from langchain_ollama import ChatOllama
 from pydantic import BaseModel, Field
@@ -15,7 +14,6 @@ def run_analysis(observed_data: dict):
     telemetry = observed_data["telemetry"]
     allowed_tools = observed_data["available_tools"]
     similar_incidents = search_similar(telemetry)
-    # 1. Setup Model
     llm = ChatOllama(
         model="qwen2.5:7b", 
         temperature=0
@@ -66,13 +64,11 @@ def run_analysis(observed_data: dict):
     try:
         result = structured_llm.invoke(prompt)
         
-        # ... (Same safe conversion logic as before) ...
         if hasattr(result, "model_dump"):
             result_dict = result.model_dump()
         else:
             result_dict = result
 
-        # --- The Enforcer ---
         selected_tool = result_dict.get("tool")
         if selected_tool not in allowed_tools:
             print(f"!!! SYSTEM INTERCEPTION !!! AI tried to use fake tool: '{selected_tool}'")

@@ -1,7 +1,6 @@
 import simulation
 import time
 
-# --- Standard Tools ---
 def reroute_traffic():
     time.sleep(1)
     simulation.resolve_problem("congestion")
@@ -21,7 +20,6 @@ def escalate_to_engineers():
     simulation.resolve_problem("fiber_cut")
     return "Incident Ticket #4902 dispatched to NOC."
 
-# --- Advanced Tools ---
 def deploy_load_balancer():
     """Fixes High Link Utilization without full reroute"""
     time.sleep(1)
@@ -31,7 +29,6 @@ def deploy_load_balancer():
 def reset_bgp_session():
     """Fixes Routing Flapping and BGP Leaks"""
     time.sleep(3)
-    # Checks if either problem exists and resolves it
     if simulation.resolve_problem("firmware_corruption"):
         return "BGP Session hard reset. Routes re-advertised."
     if simulation.resolve_problem("bgp_leak"):
@@ -41,7 +38,6 @@ def reset_bgp_session():
 def apply_rate_limiting():
     """Fixes mild DDoS or Broadcast Storms"""
     time.sleep(0.5)
-    # Prioritize resolving Broadcast Storm first
     if simulation.resolve_problem("broadcast_storm"):
         return "Rate limiting applied. Broadcast storm suppressed."
     if simulation.resolve_problem("ddos_attack"):

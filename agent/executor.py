@@ -11,14 +11,11 @@ def get_agent_decision(excluded_tools=None):
     if excluded_tools is None:
         excluded_tools = []
 
-    # 1. Observe
     observed = get_observed_data()
 
-    # 2. Add available tools (Filter out the excluded ones)
     all_tools = list(tools.AVAILABLE_TOOLS.keys())
     observed["available_tools"] = [t for t in all_tools if t not in excluded_tools]
 
-    # 3. Reason
     decision = run_analysis(observed)
     
     return decision

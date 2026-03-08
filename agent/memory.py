@@ -3,7 +3,6 @@ import os
 
 MEMORY_FILE = "agent_memory.json"
 
-# Default memory
 DEFAULT_MEMORY = {
     "reroute_traffic": 0,
     "deploy_load_balancer": 0,

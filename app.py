@@ -4,33 +4,27 @@ import agent.tools as tools
 from agent.memory import get_tool_bias, update_memory
 import requests 
 import json
-# Import the new split functions
 from agent.executor import get_agent_decision, execute_tool
 
 RISK_THRESHOLD = 50
 
 app = Flask(__name__)
 
-# --- HELPER: CENTRALIZED AGENT LOGIC ---
 def run_autonomous_cycle(excluded_tools=None):
     """
     Encapsulates the full agent lifecycle:
     Think -> Apply Bias -> Check Risk -> Execute or Pend
     """
-    # 1. THINK (Pass exclusions to prevent picking rejected tools)
     decision = get_agent_decision(excluded_tools)
 
     tool = decision.get("tool")
     thought = decision.get("thought")
     risk = decision.get("risk", 0)
 
-    # Apply reinforcement learning bias
     bias = get_tool_bias(tool)
     risk = max(0, min(100, risk - (bias * 10)))
 
-    # 2. CHECK RISK
     if risk > RISK_THRESHOLD:
-        # HIGH RISK: Stop here. Log as Pending. Do NOT execute.
         simulation.log_ai_action(
             thought,
             tool,
@@ -42,7 +36,6 @@ def run_autonomous_cycle(excluded_tools=None):
             "execution_result": "Awaiting admin approval"
         }
 
-    # 3. LOW RISK: Execute immediately.
     result = execute_tool(tool)
     
     simulation.log_ai_action(
@@ -58,7 +51,6 @@ def run_autonomous_cycle(excluded_tools=None):
     }
 
 
-# --- Pages ---
 @app.route('/')
 def index(): return render_template('status.html')
 
@@ -85,11 +77,9 @@ def active_symptoms():
         }
     })
 
-# --- API ENDPOINTS ---
 
 @app.route("/api/run_agent", methods=["POST"])
 def run_agent_endpoint():
-    # Use the helper function
     result = run_autonomous_cycle()
     return jsonify(result)
 
@@ -99,11 +89,9 @@ def approve_action():
     tool_name = data.get("tool")
 
     if tool_name in tools.AVAILABLE_TOOLS:
-        # 1. Execute the tool now
         result = execute_tool(tool_name)
         update_memory(tool_name, +1)
         
-        # 2. Update Status
         found = False
         for log in simulation.network_state["ai_logs"]:
             if log["action"] == tool_name and log["status"] == "Pending Approval":
@@ -125,18 +113,14 @@ def reject_action():
     data = request.json
     tool_name = data.get("tool")
 
-    # 1. Update Memory (Punish the tool)
     update_memory(tool_name, -1)
 
-    # 2. Mark the log as Rejected
     for log in simulation.network_state["ai_logs"]:
         if log["action"] == tool_name and log["status"] == "Pending Approval":
             log["status"] = "Rejected"
             log["thought"] += " [Admin Rejected]"
             break
     
-    # 3. RERUN THE AGENT (The Fix)
-    # We immediately run the cycle again, but we forbid the rejected tool.
     print(f"!!! Re-running Agent excluding: {tool_name} !!!")
     retry_result = run_autonomous_cycle(excluded_tools=[tool_name])
 
@@ -158,7 +142,6 @@ def trigger_scenario():
     problem = request.json.get('problem')
     simulation.inject_problem(problem)
     
-    # Use the helper function
     try:
         result = run_autonomous_cycle()
         return jsonify(result)
