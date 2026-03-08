@@ -64,6 +64,10 @@ def admin_page(): return render_template('admin.html')
 def get_problems():
     return jsonify(simulation.PROBLEM_CATALOG)
 
+@app.route('/api/active_problems')
+def get_active_problems():
+    return jsonify(simulation.network_state.get("active_problems", []))
+
 @app.route("/api/active_symptoms")
 def active_symptoms():
     data = simulation.get_live_data()

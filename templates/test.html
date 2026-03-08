@@ -60,7 +60,12 @@
 </head>
 <body>
     <h1 style="border-bottom: 1px solid #333; padding-bottom: 10px; text-align: left;">PROBLEM CREATOR</h1>
-
+    <div style="margin: 12px 0;">
+        <button id="autoSimBtn" class="problem-card" style="display:inline-block; padding:8px 14px; border-radius:6px; cursor:pointer; background:#0b0b0b; border:1px solid #333; color:#fff; font-weight:bold;">
+            Start Auto-Simulate
+        </button>
+        <span id="autoSimStatus" style="margin-left:12px; color:#aaa; font-family:monospace;">Idle</span>
+    </div>
     <div id="problem-container" class="problem-grid">
         <p>Loading Scenarios...</p>
     </div>
@@ -204,6 +209,131 @@
             } catch (e) {
                 console.error("Polling error", e);
             }
+        }
+
+        let autoSim = false;
+        const autoBtn = document.getElementById('autoSimBtn');
+        const autoStatus = document.getElementById('autoSimStatus');
+        const consoleLog = document.getElementById('console-log');
+
+        const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+        autoBtn.addEventListener('click', () => {
+            autoSim = !autoSim;
+            if (autoSim) {
+            autoBtn.textContent = 'Stop Auto-Simulate';
+            autoStatus.textContent = 'Running';
+            startAutoSimulate();
+            } else {
+            autoBtn.textContent = 'Start Auto-Simulate';
+            autoStatus.textContent = 'Stopping...';
+            }
+        });
+
+        async function getProblemsAndActive() {
+            const [pRes, aRes] = await Promise.all([fetch('/api/problems'), fetch('/api/active_problems')]);
+            const problems = await pRes.json();
+            const active = await aRes.json();
+            return { problems, active };
+        }
+
+        function pickRandomProblem(problems, activeList) {
+            const ids = Object.keys(problems || {});
+            const candidates = ids.filter(id => !activeList.includes(id));
+            const pool = candidates.length ? candidates : ids;
+            if (!pool.length) return null;
+            return pool[Math.floor(Math.random() * pool.length)];
+        }
+
+        async function waitForResolution(problemId, pollInterval = 800) {
+            while (autoSim) {
+            try {
+                const res = await fetch('/api/active_problems');
+                const active = await res.json();
+                if (!active.includes(problemId)) {
+                return true;
+                }
+            } catch (e) {
+                console.error("active_problems fetch failed", e);
+            }
+            await sleep(pollInterval);
+            }
+            return false
+        }
+
+        async function startAutoSimulate() {
+            if (!autoSim) return;
+            const log = consoleLog;
+
+            log.innerHTML += `<br><br><span style="color:#00ff88;">> Auto-simulate started</span>`;
+            log.scrollTop = log.scrollHeight;
+
+            while (autoSim) {
+            try {
+                const { problems, active } = await getProblemsAndActive();
+
+                const problemId = pickRandomProblem(problems, active);
+                if (!problemId) {
+                log.innerHTML += `<br><span>[AUTO] No problems available to inject</span>`;
+                await sleep(1000);
+                continue;
+                }
+
+                const problemName = problems[problemId]?.name ?? problemId;
+                log.innerHTML += `<br><br><span style="color:#ff5555; font-weight:bold;">> [AUTO] Injecting fault: ${problemName} (${problemId})</span>`;
+                log.scrollTop = log.scrollHeight;
+
+                const triggerRes = await fetch('/api/trigger_scenario', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({problem: problemId})
+                });
+                const triggerData = await triggerRes.json();
+
+                if (triggerData.error) {
+                log.innerHTML += `<br>[AUTO ERROR] ${triggerData.error}`;
+                log.scrollTop = log.scrollHeight;
+                await sleep(800);
+                continue;
+                } else {
+                const decisionTool = triggerData.decision?.tool ?? 'N/A';
+                const decisionThought = triggerData.decision?.thought ?? '';
+                const executionResult = triggerData.execution_result ?? '';
+
+                log.innerHTML += `<br>[AUTO DECISION] Tool: ${decisionTool}`;
+                log.innerHTML += `<br>[AUTO REASON] "${decisionThought}"`;
+                log.innerHTML += `<br>[AUTO RESULT] ${executionResult}`;
+                log.scrollTop = log.scrollHeight;
+                }
+
+                const resolved = await waitForResolution(problemId);
+
+                if (!autoSim) {
+                log.innerHTML += `<br><span style="color:#ffaa00;">> Auto-simulate stopped by user</span>`;
+                autoStatus.textContent = 'Idle';
+                break;
+                }
+
+                if (resolved) {
+                log.innerHTML += `<br><span style="color:#00ff00;">> [AUTO] Problem resolved: ${problemName} (${problemId})</span>`;
+                } else {
+                log.innerHTML += `<br><span style="color:#ff4444;">> [AUTO] Stopped waiting for resolution of ${problemId}</span>`;
+                }
+                log.scrollTop = log.scrollHeight;
+
+                await sleep(700);
+            } catch (e) {
+                console.error("Auto-simulate loop error", e);
+                log.innerHTML += `<br>[AUTO EXCEPTION] ${e}`;
+                log.scrollTop = log.scrollHeight;
+                await sleep(1200);
+            }
+            }
+
+            autoStatus.textContent = 'Idle';
+            autoBtn.textContent = 'Start Auto-Simulate';
+            log.innerHTML += `<br><span style="color:#00ff88;">> Auto-simulate ended</span>`;
+            log.scrollTop = log.scrollHeight;
         }
         
         loadProblems();
