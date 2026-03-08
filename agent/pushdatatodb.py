@@ -88,6 +88,16 @@ add_incident(
 "Firmware corruption","rollback_firmware", 65
 )
 
+add_incident(
+{"latency":37,"packet_loss":5.4,"throughput":840,"device_health":"Critical","routing_status":"Flapping"},
+"Firmware corruption","escalate_to_engineers", 5
+)
+
+add_incident(
+{"latency":42,"packet_loss":6.1,"throughput":800,"device_health":"Critical","routing_status":"Flapping"},
+"Firmware corruption","escalate_to_engineers", 10
+)
+
 #CONGESTION INCIDENTS
 add_incident(
 {"latency":120,"packet_loss":2.1,"throughput":720,"device_health":"Healthy","routing_status":"Stable"},
@@ -148,6 +158,21 @@ add_incident(
 add_incident(
 {"latency":290,"packet_loss":8.2,"throughput":720,"device_health":"Healthy","routing_status":"Flapping"},
 "BGP Route Leak","reset_bgp_session", 85
+)
+
+add_incident(
+{"latency":270,"packet_loss":7.8,"throughput":760,"device_health":"Healthy","routing_status":"Flapping"},
+"BGP Route Leak","reroute_traffic", 40
+)
+
+add_incident(
+{"latency":300,"packet_loss":8.5,"throughput":730,"device_health":"Healthy","routing_status":"Flapping"},
+"BGP Route Leak","reroute_traffic", 35
+)
+
+add_incident(
+{"latency":290,"packet_loss":8.3,"throughput":710,"device_health":"Healthy","routing_status":"Flapping"},
+"BGP Route Leak","escalate_to_engineers", 10
 )
 
 #BROADCAST STORM INCIDENTS
