@@ -169,7 +169,6 @@
 
                 const topLog = logs[0];
 
-                // --- SCENARIO 1: The logs are the same, but status changed to Rejected ---
                 if (topLog.timestamp === lastKnownLogTime && topLog.status === 'Rejected' && !retryMessagePrinted) {
                     log.innerHTML += `<br> <span style="color:#ffff55;">> Model retrying...</span>`; 
                     retryMessagePrinted = true;
@@ -177,7 +176,6 @@
                     log.scrollTop = log.scrollHeight;
                 }
 
-                // --- SCENARIO 2: A NEW log has appeared (The Retry Decision) ---
                 else if (topLog.timestamp !== lastKnownLogTime) {
                     
                     if (logs.length > 1 && logs[1].status === 'Rejected' && !retryMessagePrinted) {
@@ -199,7 +197,6 @@
                     }
                 }
 
-                // --- SCENARIO 3: Approved ---
                 else if (topLog.status === 'Executed' && topLog.timestamp === lastKnownLogTime && lastKnownStatus === 'Pending Approval') {
                     log.innerHTML += `<br> <span style="color:#00ff00;">> Admin Approved. Action Executed.</span>`;
                     log.scrollTop = log.scrollHeight;

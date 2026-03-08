@@ -1,9 +1,6 @@
 from vectordb import add_incident
 
-# -------------------------
-# DDoS INCIDENTS
-# -------------------------
-
+#DDoS INCIDENTS
 add_incident(
 {"latency":280,"packet_loss":22,"throughput":4800,"device_health":"Healthy","routing_status":"Stable"},
 "DDoS attack","enable_ddos_protection", 25
@@ -29,10 +26,7 @@ add_incident(
 "DDoS attack","apply_rate_limiting", 80
 )
 
-# -------------------------
-# FIBER CUT INCIDENTS
-# -------------------------
-
+#FIBER CUT INCIDENTS
 add_incident(
 {"latency":20,"packet_loss":100,"throughput":0,"device_health":"Healthy","routing_status":"Unreachable"},
 "Fiber cut","escalate_to_engineers", 0
@@ -58,10 +52,7 @@ add_incident(
 "Fiber cut","reroute_traffic", 10
 )
 
-# -------------------------
-# FIRMWARE INCIDENTS
-# -------------------------
-
+#FIRMWARE INCIDENTS
 add_incident(
 {"latency":35,"packet_loss":6,"throughput":830,"device_health":"Critical","routing_status":"Flapping"},
 "Firmware corruption","rollback_firmware", 60
@@ -97,10 +88,7 @@ add_incident(
 "Firmware corruption","rollback_firmware", 65
 )
 
-# -------------------------
-# CONGESTION INCIDENTS
-# -------------------------
-
+#CONGESTION INCIDENTS
 add_incident(
 {"latency":120,"packet_loss":2.1,"throughput":720,"device_health":"Healthy","routing_status":"Stable"},
 "Network congestion","reroute_traffic", 30
@@ -141,10 +129,7 @@ add_incident(
 "Network congestion","deploy_load_balancer", 60
 )
 
-# -------------------------
-# BGP ROUTE LEAK INCIDENTS
-# -------------------------
-
+#BGP ROUTE LEAK INCIDENTS
 add_incident(
 {"latency":280,"packet_loss":8,"throughput":750,"device_health":"Healthy","routing_status":"Flapping"},
 "BGP Route Leak","reset_bgp_session", 90
@@ -165,10 +150,7 @@ add_incident(
 "BGP Route Leak","reset_bgp_session", 85
 )
 
-# -------------------------
-# BROADCAST STORM INCIDENTS
-# -------------------------
-
+#BROADCAST STORM INCIDENTS
 add_incident(
 {"latency":90,"packet_loss":14,"throughput":2200,"device_health":"Degraded","routing_status":"Stable"},
 "Broadcast Storm","apply_rate_limiting", 45

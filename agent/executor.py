@@ -4,8 +4,8 @@ from . import tools
 
 def get_agent_decision(excluded_tools=None):
     """
-    Returns the decision (JSON) but DOES NOT execute the tool.
-    Accepts excluded_tools to prevent re-selecting rejected actions.
+    Returns the decision (JSON) but DOES NOT actually execute the tool!
+    Accepts excluded_tools to prevent re-selecting rejected actions
     """
     if excluded_tools is None:
         excluded_tools = []
@@ -21,7 +21,7 @@ def get_agent_decision(excluded_tools=None):
 
 def execute_tool(tool_name):
     """
-    Only called if risk is low OR admin approves.
+    Only called if risk is low OR admin approves
     """
     if tool_name in tools.AVAILABLE_TOOLS:
         return tools.AVAILABLE_TOOLS[tool_name]()
