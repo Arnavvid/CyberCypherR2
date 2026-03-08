@@ -29,16 +29,24 @@ def deploy_load_balancer():
     return "L7 Load Balancer deployed. Traffic distributed."
 
 def reset_bgp_session():
-    """Fixes Routing Flapping"""
+    """Fixes Routing Flapping and BGP Leaks"""
     time.sleep(3)
-    simulation.resolve_problem("firmware_corruption") 
-    return "BGP Session hard reset. Routes re-advertised."
+    # Checks if either problem exists and resolves it
+    if simulation.resolve_problem("firmware_corruption"):
+        return "BGP Session hard reset. Routes re-advertised."
+    if simulation.resolve_problem("bgp_leak"):
+        return "BGP Session cleared. Invalid routes flushed."
+    return "BGP Reset attempted (No active BGP issues found)."
 
 def apply_rate_limiting():
-    """Fixes mild DDoS or abnormal spikes"""
+    """Fixes mild DDoS or Broadcast Storms"""
     time.sleep(0.5)
-    simulation.resolve_problem("ddos_attack")
-    return "Rate limiting applied to /24 subnet."
+    # Prioritize resolving Broadcast Storm first
+    if simulation.resolve_problem("broadcast_storm"):
+        return "Rate limiting applied. Broadcast storm suppressed."
+    if simulation.resolve_problem("ddos_attack"):
+        return "Rate limiting applied to /24 subnet."
+    return "Rate limiting applied."
 
 AVAILABLE_TOOLS = {
     "reroute_traffic": reroute_traffic,

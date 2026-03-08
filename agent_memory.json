@@ -4,6 +4,6 @@
   "enable_ddos_protection": -1,
   "apply_rate_limiting": 0,
   "rollback_firmware": -5,
-  "reset_bgp_session": 1,
+  "reset_bgp_session": 2,
   "escalate_to_engineers": 2
 }

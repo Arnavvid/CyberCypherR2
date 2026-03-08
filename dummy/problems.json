@@ -40,5 +40,27 @@
             "packet_loss": 100,
             "routing_status": "Unreachable"
         }
+    },
+    "bgp_leak": {
+        "name": "BGP Route Leak",
+        "description": "Traffic misrouted to wrong peers.",
+        "color": "#d35400",
+        "effects": {
+            "latency": 250,
+            "packet_loss": 8.0,
+            "routing_status": "Flapping",
+            "throughput": -200
+        }
+    },
+    "broadcast_storm": {
+        "name": "Broadcast Storm",
+        "description": "Layer 2 loop causing internal flooding.",
+        "color": "#16a085",
+        "effects": {
+            "throughput": 2000,
+            "packet_loss": 15.0,
+            "device_health": "Degraded",
+            "latency": 80
+        }
     }
 }

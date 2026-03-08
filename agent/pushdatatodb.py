@@ -29,8 +29,6 @@ add_incident(
 "DDoS attack","apply_rate_limiting", 80
 )
 
-
-
 # -------------------------
 # FIBER CUT INCIDENTS
 # -------------------------
@@ -59,8 +57,6 @@ add_incident(
 {"latency":18,"packet_loss":99,"throughput":0,"device_health":"Healthy","routing_status":"Unreachable"},
 "Fiber cut","reroute_traffic", 10
 )
-
-
 
 # -------------------------
 # FIRMWARE INCIDENTS
@@ -100,8 +96,6 @@ add_incident(
 {"latency":38,"packet_loss":5.2,"throughput":840,"device_health":"Critical","routing_status":"Flapping"},
 "Firmware corruption","rollback_firmware", 65
 )
-
-
 
 # -------------------------
 # CONGESTION INCIDENTS
@@ -145,4 +139,57 @@ add_incident(
 add_incident(
 {"latency":145,"packet_loss":2.6,"throughput":720,"device_health":"Healthy","routing_status":"Stable"},
 "Network congestion","deploy_load_balancer", 60
+)
+
+# -------------------------
+# BGP ROUTE LEAK INCIDENTS
+# -------------------------
+
+add_incident(
+{"latency":280,"packet_loss":8,"throughput":750,"device_health":"Healthy","routing_status":"Flapping"},
+"BGP Route Leak","reset_bgp_session", 90
+)
+
+add_incident(
+{"latency":310,"packet_loss":9,"throughput":700,"device_health":"Healthy","routing_status":"Flapping"},
+"BGP Route Leak","reset_bgp_session", 85
+)
+
+add_incident(
+{"latency":260,"packet_loss":7.5,"throughput":780,"device_health":"Healthy","routing_status":"Flapping"},
+"BGP Route Leak","reset_bgp_session", 90
+)
+
+add_incident(
+{"latency":290,"packet_loss":8.2,"throughput":720,"device_health":"Healthy","routing_status":"Flapping"},
+"BGP Route Leak","reset_bgp_session", 85
+)
+
+# -------------------------
+# BROADCAST STORM INCIDENTS
+# -------------------------
+
+add_incident(
+{"latency":90,"packet_loss":14,"throughput":2200,"device_health":"Degraded","routing_status":"Stable"},
+"Broadcast Storm","apply_rate_limiting", 45
+)
+
+add_incident(
+{"latency":85,"packet_loss":12,"throughput":2100,"device_health":"Degraded","routing_status":"Stable"},
+"Broadcast Storm","apply_rate_limiting", 40
+)
+
+add_incident(
+{"latency":95,"packet_loss":16,"throughput":2400,"device_health":"Degraded","routing_status":"Stable"},
+"Broadcast Storm","apply_rate_limiting", 50
+)
+
+add_incident(
+{"latency":100,"packet_loss":15,"throughput":2300,"device_health":"Degraded","routing_status":"Stable"},
+"Broadcast Storm","apply_rate_limiting", 45
+)
+
+add_incident(
+{"latency":88,"packet_loss":13,"throughput":2150,"device_health":"Degraded","routing_status":"Stable"},
+"Broadcast Storm","apply_rate_limiting", 40
 )
