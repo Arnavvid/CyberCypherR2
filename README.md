@@ -43,3 +43,6 @@ It features a Retrieval-Augmented Generation (RAG) engine to learn from historic
 3. Pull the required model:
    ```bash
    ollama pull qwen2.5:7b
+4. Install requirements:
+   ```bash
+   pip install -r requirements.txt
