@@ -2,27 +2,27 @@ from vectordb import add_incident
 
 #DDoS INCIDENTS
 add_incident(
-{"latency":280,"packet_loss":22,"throughput":4800,"device_health":"Healthy","routing_status":"Stable"},
+{"latency":280,"packet_loss":50,"throughput":4800,"device_health":"Healthy","routing_status":"Stable"},
 "DDoS attack","enable_ddos_protection", 25
 )
 
 add_incident(
-{"latency":310,"packet_loss":25,"throughput":5200,"device_health":"Healthy","routing_status":"Stable"},
+{"latency":310,"packet_loss":60,"throughput":5200,"device_health":"Healthy","routing_status":"Stable"},
 "DDoS attack","enable_ddos_protection", 20
 )
 
 add_incident(
-{"latency":250,"packet_loss":18,"throughput":4100,"device_health":"Healthy","routing_status":"Stable"},
+{"latency":250,"packet_loss":70,"throughput":4100,"device_health":"Healthy","routing_status":"Stable"},
 "DDoS attack","apply_rate_limiting", 70
 )
 
 add_incident(
-{"latency":340,"packet_loss":30,"throughput":5600,"device_health":"Healthy","routing_status":"Stable"},
+{"latency":340,"packet_loss":50,"throughput":5600,"device_health":"Healthy","routing_status":"Stable"},
 "DDoS attack","enable_ddos_protection", 15
 )
 
 add_incident(
-{"latency":295,"packet_loss":21,"throughput":4300,"device_health":"Healthy","routing_status":"Stable"},
+{"latency":295,"packet_loss":50,"throughput":4300,"device_health":"Healthy","routing_status":"Stable"},
 "DDoS attack","apply_rate_limiting", 80
 )
 

@@ -14,7 +14,7 @@ def get_agent_decision(excluded_tools=None):
 
     all_tools = list(tools.AVAILABLE_TOOLS.keys())
     observed["available_tools"] = [t for t in all_tools if t not in excluded_tools]
-
+    
     decision = run_analysis(observed)
     
     return decision

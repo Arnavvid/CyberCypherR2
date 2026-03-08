@@ -148,14 +148,13 @@ def reject_action():
 
     retry_result = run_autonomous_cycle(excluded_tools=[tool_name])
 
-    retry_decision = retry_result.get("decision", {})
-
-    simulation.log_ai_action(
-        retry_decision.get("thought", "Retrying decision"),
-        retry_decision.get("tool", "unknown"),
-        retry_decision.get("risk", 0),
-        "Pending Approval"
-    )
+    # retry_decision = retry_result.get("decision", {})
+    # simulation.log_ai_action(
+    #     retry_decision.get("thought", "Retrying decision"),
+    #     retry_decision.get("tool", "unknown"),
+    #     retry_decision.get("risk", 0),
+    #     "Pending Approval"
+    # )
 
     return jsonify({
         "status": "rejected",

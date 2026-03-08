@@ -16,7 +16,7 @@
         "color": "red",
         "effects": {
             "throughput": 5000,
-            "packet_loss": 25.0,
+            "packet_loss": 50.0,
             "latency": 300,
             "link_utilization": 100
         }
