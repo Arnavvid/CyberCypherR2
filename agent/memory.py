@@ -1,48 +1,95 @@
+# agent/memory.py
 import json
 import os
 
 MEMORY_FILE = "agent_memory.json"
 
-DEFAULT_MEMORY = {
-    "reroute_traffic": 0,
-    "deploy_load_balancer": 0,
-    "enable_ddos_protection": 0,
-    "apply_rate_limiting": 0,
-    "rollback_firmware": 0,
-    "reset_bgp_session": 0,
-    "escalate_to_engineers": 0
-}
 
 def load_memory():
-
     if not os.path.exists(MEMORY_FILE):
-        save_memory(DEFAULT_MEMORY)
-        return DEFAULT_MEMORY.copy()
-
+        return {}
     with open(MEMORY_FILE, "r") as f:
         return json.load(f)
 
 
 def save_memory(mem):
-
     with open(MEMORY_FILE, "w") as f:
         json.dump(mem, f, indent=2)
 
 
-def update_memory(tool, delta):
+def classify_cluster(telemetry):
+    """
+    Simple telemetry -> cluster classifier. Tune these rules as you like.
+    """
+    latency = telemetry.get("latency", 0)
+    throughput = telemetry.get("throughput", 0)
+    routing = telemetry.get("routing_status", "")
+    device = telemetry.get("device_health", "")
 
+    if routing == "Flapping":
+        return "routing_instability"
+
+    if device == "Critical":
+        return "device_failure"
+
+    if latency > 250 and throughput > 4000:
+        return "traffic_flood"
+
+    if latency > 120 and throughput < 1000:
+        return "network_congestion"
+
+    return "general_issue"
+
+
+def update_memory(telemetry, tool, success):
+    """
+    Record an outcome (success True/False) for tool under the telemetry cluster.
+    """
+    cluster = classify_cluster(telemetry)
     mem = load_memory()
 
-    if tool not in mem:
-        mem[tool] = 0
+    if cluster not in mem:
+        mem[cluster] = {}
 
-    mem[tool] += delta
+    if tool not in mem[cluster]:
+        mem[cluster][tool] = {"success": 0, "fail": 0}
+
+    if success:
+        mem[cluster][tool]["success"] += 1
+    else:
+        mem[cluster][tool]["fail"] += 1
 
     save_memory(mem)
 
 
-def get_tool_bias(tool):
-
+def get_tool_score(telemetry, tool):
+    """
+    Returns success ratio in [0,1] for (cluster,tool).
+    If no history, returns 0.5 as neutral to avoid over-penalizing unknown tools.
+    """
+    cluster = classify_cluster(telemetry)
     mem = load_memory()
 
-    return mem.get(tool, 0)
+    if cluster not in mem:
+        return 0.5
+
+    stats = mem[cluster].get(tool)
+    if not stats:
+        return 0.5
+
+    success = stats.get("success", 0)
+    fail = stats.get("fail", 0)
+    total = success + fail
+
+    if total == 0:
+        return 0.5
+
+    return success / total
+
+
+def get_tool_bias(telemetry, tool):
+    """
+    Convenience alias used by app.run_autonomous_cycle.
+    Returns a bias value in [0,1] (success ratio) derived from historical data.
+    """
+    return get_tool_score(telemetry, tool)
