@@ -11,8 +11,52 @@ RISK_THRESHOLD = 50
 
 app = Flask(__name__)
 
-# !!! UPDATE THIS TO YOUR PARTNER'S URL !!!
-ACTIVE_PROBLEMS = "http://localhost:5000/api/run_agent"
+# --- HELPER: CENTRALIZED AGENT LOGIC ---
+def run_autonomous_cycle(excluded_tools=None):
+    """
+    Encapsulates the full agent lifecycle:
+    Think -> Apply Bias -> Check Risk -> Execute or Pend
+    """
+    # 1. THINK (Pass exclusions to prevent picking rejected tools)
+    decision = get_agent_decision(excluded_tools)
+
+    tool = decision.get("tool")
+    thought = decision.get("thought")
+    risk = decision.get("risk", 0)
+
+    # Apply reinforcement learning bias
+    bias = get_tool_bias(tool)
+    risk = max(0, min(100, risk - (bias * 10)))
+
+    # 2. CHECK RISK
+    if risk > RISK_THRESHOLD:
+        # HIGH RISK: Stop here. Log as Pending. Do NOT execute.
+        simulation.log_ai_action(
+            thought,
+            tool,
+            risk,
+            "Pending Approval"
+        )
+        return {
+            "decision": decision,
+            "execution_result": "Awaiting admin approval"
+        }
+
+    # 3. LOW RISK: Execute immediately.
+    result = execute_tool(tool)
+    
+    simulation.log_ai_action(
+        thought,
+        tool,
+        risk,
+        "Executed"
+    )
+
+    return {
+        "decision": decision,
+        "execution_result": result
+    }
+
 
 # --- Pages ---
 @app.route('/')
@@ -41,47 +85,13 @@ def active_symptoms():
         }
     })
 
+# --- API ENDPOINTS ---
+
 @app.route("/api/run_agent", methods=["POST"])
 def run_agent_endpoint():
-    # 1. THINK: Get the decision ONLY (No execution yet)
-    decision = get_agent_decision()
-
-    tool = decision.get("tool")
-    thought = decision.get("thought")
-    risk = decision.get("risk", 0)
-
-    # Apply reinforcement learning bias
-    bias = get_tool_bias(tool)
-    risk = max(0, min(100, risk - (bias * 10)))
-
-    # 2. CHECK RISK
-    if risk > RISK_THRESHOLD:
-        # HIGH RISK: Stop here. Log as Pending. Do NOT execute.
-        simulation.log_ai_action(
-            thought,
-            tool,
-            risk,
-            "Pending Approval"
-        )
-        return jsonify({
-            "decision": decision,
-            "execution_result": "Awaiting admin approval"
-        })
-
-    # 3. LOW RISK: Execute immediately.
-    result = execute_tool(tool)
-    
-    simulation.log_ai_action(
-        thought,
-        tool,
-        risk,
-        "Executed"
-    )
-
-    return jsonify({
-        "decision": decision,
-        "execution_result": result
-    })
+    # Use the helper function
+    result = run_autonomous_cycle()
+    return jsonify(result)
 
 @app.route("/api/approve_action", methods=["POST"])
 def approve_action():
@@ -92,18 +102,17 @@ def approve_action():
         # 1. Execute the tool now
         result = execute_tool(tool_name)
         update_memory(tool_name, +1)
-        # 2. Find and Update the existing 'Pending' log
-        # This prevents duplicate rows in the Admin panel
+        
+        # 2. Update Status
         found = False
         for log in simulation.network_state["ai_logs"]:
             if log["action"] == tool_name and log["status"] == "Pending Approval":
                 log["status"] = "Executed"
                 log["thought"] += " [Admin Approved]"
                 found = True
-                break  # Update only the most recent pending one
+                break 
 
         if not found:
-            # Fallback if logs were cleared
             simulation.log_ai_action("Manual Approval", tool_name, 0, "Executed")
 
         return jsonify({"result": result})
@@ -113,19 +122,28 @@ def approve_action():
 
 @app.route("/api/reject_action", methods=["POST"])
 def reject_action():
-
     data = request.json
     tool_name = data.get("tool")
 
+    # 1. Update Memory (Punish the tool)
     update_memory(tool_name, -1)
 
+    # 2. Mark the log as Rejected
     for log in simulation.network_state["ai_logs"]:
         if log["action"] == tool_name and log["status"] == "Pending Approval":
             log["status"] = "Rejected"
             log["thought"] += " [Admin Rejected]"
             break
+    
+    # 3. RERUN THE AGENT (The Fix)
+    # We immediately run the cycle again, but we forbid the rejected tool.
+    print(f"!!! Re-running Agent excluding: {tool_name} !!!")
+    retry_result = run_autonomous_cycle(excluded_tools=[tool_name])
 
-    return jsonify({"status": "rejected"})
+    return jsonify({
+        "status": "rejected", 
+        "retry_decision": retry_result
+    })
 
 @app.route('/api/status')
 def get_status():
@@ -135,40 +153,15 @@ def get_status():
 def get_logs():
     return jsonify(simulation.network_state["ai_logs"])
 
-# --- THE TRIGGER LOGIC ---
 @app.route('/api/trigger_scenario', methods=['POST'])
 def trigger_scenario():
     problem = request.json.get('problem')
-    
-    # A. Inject
     simulation.inject_problem(problem)
     
-    # B. Run the endpoint logic internally
-    # We call the same logic as the /api/run_agent endpoint to ensure consistency
+    # Use the helper function
     try:
-        # 1. Think
-        decision = get_agent_decision()
-        tool_name = decision.get("tool")
-        thought = decision.get("thought")
-        risk = decision.get("risk", 0)
-
-        # 2. Risk Check
-        if risk > RISK_THRESHOLD:
-            simulation.log_ai_action(thought, tool_name, risk, "Pending Approval")
-            return jsonify({
-                "decision": decision,
-                "execution_result": "Awaiting admin approval"
-            })
-        
-        # 3. Execute
-        result = execute_tool(tool_name)
-        simulation.log_ai_action(thought, tool_name, risk, "Executed")
-
-        return jsonify({
-            "decision": decision,
-            "execution_result": result
-        })
-
+        result = run_autonomous_cycle()
+        return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)})
 

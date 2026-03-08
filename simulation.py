@@ -1,53 +1,23 @@
 import random
 import time
+import json
+import os
 
-# --- CONFIGURATION: Define your problems here ---
-PROBLEM_CATALOG = {
-    "congestion": {
-        "name": "Network Congestion",
-        "description": "Simulates high traffic causing lag.",
-        "color": "orange",
-        "effects": {
-            "latency": 150,          # Adds 150ms
-            "link_utilization": 95,  # Sets to 95%
-            "throughput": -500,       # Drops throughput slightly
-            "packet_loss": 2.5       # Added small loss to make it detectable
-        }
-    },
-    "ddos_attack": {
-        "name": "DDoS Attack",
-        "description": "Massive traffic spike and packet loss.",
-        "color": "red",
-        "effects": {
-            "throughput": 5000,      # Adds 5000 Mbps (Massive spike)
-            "packet_loss": 25.0,     # Adds 25% loss
-            "latency": 300,
-            "link_utilization": 100
-        }
-    },
-    "firmware_corruption": {
-        "name": "Firmware Corruption",
-        "description": "Destabilizes device health and routing.",
-        "color": "purple",
-        "effects": {
-            "packet_loss": 5.0,
-            "device_health": "Critical", 
-            "routing_status": "Flapping" 
-        }
-    },
-    "fiber_cut": {
-        "name": "Fiber Optic Cut",
-        "description": "Complete physical link failure.",
-        "color": "#34495e",
-        "effects": {
-            # These are placeholders. 
-            # The 'Final Override' logic below guarantees 0 throughput.
-            "throughput": -10000, 
-            "packet_loss": 100,
-            "routing_status": "Unreachable"
-        }
-    }
-}
+# --- LOAD CONFIGURATION FROM JSON ---
+def load_problem_catalog():
+    try:
+        # Construct path to dummy/problems.json
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        json_path = os.path.join(base_dir, 'dummy', 'problems.json')
+        
+        with open(json_path, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Error loading problems.json: {e}")
+        return {}
+
+# Load catalog once at startup
+PROBLEM_CATALOG = load_problem_catalog()
 
 # Global State
 network_state = {
@@ -92,9 +62,6 @@ def get_live_data():
                         data[param] += value
 
     # 3. FINAL OVERRIDES (The "Hard Truth" Logic)
-    # This ensures critical failures look exactly as they should, 
-    # overriding any noise or accumulation errors from above.
-    
     if "fiber_cut" in base["active_problems"]:
         data["throughput"] = 0        # Force Hard Down
         data["packet_loss"] = 100     # Force Total Loss

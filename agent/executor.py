@@ -2,16 +2,21 @@ from .observer import get_observed_data
 from .reasoner import run_analysis
 from . import tools
 
-def get_agent_decision():
+def get_agent_decision(excluded_tools=None):
     """
     Step 1: Observe and Reason.
     Returns the decision (JSON) but DOES NOT execute the tool.
+    Accepts excluded_tools to prevent re-selecting rejected actions.
     """
+    if excluded_tools is None:
+        excluded_tools = []
+
     # 1. Observe
     observed = get_observed_data()
 
-    # 2. Add available tools
-    observed["available_tools"] = list(tools.AVAILABLE_TOOLS.keys())
+    # 2. Add available tools (Filter out the excluded ones)
+    all_tools = list(tools.AVAILABLE_TOOLS.keys())
+    observed["available_tools"] = [t for t in all_tools if t not in excluded_tools]
 
     # 3. Reason
     decision = run_analysis(observed)

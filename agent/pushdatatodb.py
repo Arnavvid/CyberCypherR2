@@ -41,12 +41,12 @@ add_incident(
 )
 
 add_incident(
-{"latency":25,"packet_loss":100,"throughput":0,"device_health":"Healthy","routing_status":"Unreachable"},
+{"latency":25,"packet_loss":98,"throughput":0,"device_health":"Healthy","routing_status":"Unreachable"},
 "Fiber cut","escalate_to_engineers", 0
 )
 
 add_incident(
-{"latency":18,"packet_loss":100,"throughput":0,"device_health":"Healthy","routing_status":"Unreachable"},
+{"latency":18,"packet_loss":99,"throughput":0,"device_health":"Healthy","routing_status":"Unreachable"},
 "Fiber cut","escalate_to_engineers", 0
 )
 
@@ -56,7 +56,7 @@ add_incident(
 )
 
 add_incident(
-{"latency":30,"packet_loss":100,"throughput":0,"device_health":"Healthy","routing_status":"Unreachable"},
+{"latency":18,"packet_loss":99,"throughput":0,"device_health":"Healthy","routing_status":"Unreachable"},
 "Fiber cut","reroute_traffic", 10
 )
 
@@ -79,6 +79,21 @@ add_incident(
 add_incident(
 {"latency":32,"packet_loss":4.5,"throughput":820,"device_health":"Critical","routing_status":"Flapping"},
 "Firmware corruption","reset_bgp_session", 90
+)
+
+add_incident(
+{"latency":32,"packet_loss":4.5,"throughput":820,"device_health":"Critical","routing_status":"Flapping"},
+"Firmware corruption","reset_bgp_session", 90
+)
+
+add_incident(
+{"latency":32,"packet_loss":4.5,"throughput":820,"device_health":"Critical","routing_status":"Flapping"},
+"Firmware corruption","reset_bgp_session", 80
+)
+
+add_incident(
+{"latency":32,"packet_loss":4.5,"throughput":820,"device_health":"Critical","routing_status":"Flapping"},
+"Firmware corruption","reset_bgp_session", 70
 )
 
 add_incident(

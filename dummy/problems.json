@@ -1,0 +1,44 @@
+{
+    "congestion": {
+        "name": "Network Congestion",
+        "description": "Simulates high traffic causing lag.",
+        "color": "orange",
+        "effects": {
+            "latency": 150,
+            "link_utilization": 95,
+            "throughput": -500,
+            "packet_loss": 2.5
+        }
+    },
+    "ddos_attack": {
+        "name": "DDoS Attack",
+        "description": "Massive traffic spike and packet loss.",
+        "color": "red",
+        "effects": {
+            "throughput": 5000,
+            "packet_loss": 25.0,
+            "latency": 300,
+            "link_utilization": 100
+        }
+    },
+    "firmware_corruption": {
+        "name": "Firmware Corruption",
+        "description": "Destabilizes device health and routing.",
+        "color": "purple",
+        "effects": {
+            "packet_loss": 5.0,
+            "device_health": "Critical", 
+            "routing_status": "Flapping" 
+        }
+    },
+    "fiber_cut": {
+        "name": "Fiber Optic Cut",
+        "description": "Complete physical link failure.",
+        "color": "#34495e",
+        "effects": {
+            "throughput": -10000, 
+            "packet_loss": 100,
+            "routing_status": "Unreachable"
+        }
+    }
+}

@@ -69,38 +69,36 @@
     <div id="console-log">System Ready.</div>
 
     <script>
-        // 1. Fetch Problem Config on Load
+        let pollInterval = null;
+        let lastKnownLogTime = null;
+        let lastKnownStatus = null;
+        let retryMessagePrinted = false; // Prevents double printing
+
         async function loadProblems() {
             try {
                 const res = await fetch('/api/problems');
                 const catalog = await res.json();
                 const container = document.getElementById('problem-container');
-                container.innerHTML = ''; // Clear loading text
+                container.innerHTML = ''; 
 
-                // 2. Generate Buttons Dynamically
                 for (const [id, data] of Object.entries(catalog)) {
-                    // Determine simplified color class
-                    let colorClass = 'theme-orange'; // default
+                    let colorClass = 'theme-orange'; 
                     if (data.color.includes('red')) colorClass = 'theme-red';
                     if (data.color.includes('purple')) colorClass = 'theme-purple';
 
-                    // Generate Tags HTML
                     const tagsHtml = Object.keys(data.effects)
                         .map(effect => `<span class="tag">${effect}</span>`)
                         .join('');
 
-                    // Create Card HTML
                     const card = document.createElement('div');
                     card.className = `problem-card ${colorClass}`;
-                    card.style.borderColor = data.color; // override with exact color
+                    card.style.borderColor = data.color; 
                     card.innerHTML = `
                         <span class="card-title" style="color:${data.color}">${data.name}</span>
                         <span class="card-desc">${data.description}</span>
                         <div class="tags">${tagsHtml}</div>
                     `;
                     
-                    // Attach Click Event
-                    // !!! IMPORTANT: Passing TWO arguments now (ID and Name) !!!
                     card.onclick = () => runScenario(id, data.name);
                     container.appendChild(card);
                 }
@@ -111,16 +109,18 @@
             }
         }
 
-        // !!! FIXED FUNCTION SIGNATURE !!!
         async function runScenario(problemId, problemName) {
             const log = document.getElementById('console-log');
             
-            // Log the pretty name (e.g. "Network Congestion")
+            // Stop any previous polling
+            if (pollInterval) clearInterval(pollInterval);
+            retryMessagePrinted = false; // Reset flag
+
             log.innerHTML += `<br><br> <span style="color:#ff5555; font-weight:bold;">> Injecting fault: ${problemName}...</span>`; 
             log.innerHTML += `<br> <span style="color:#ffff55;">> Gathering JSON Telemetry...</span>`;
+            log.scrollTop = log.scrollHeight;
             
             try {
-                // Send the ID (e.g. "congestion") to the backend
                 const res = await fetch('/api/trigger_scenario', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -138,6 +138,17 @@
                     if (data.execution_result !== undefined) {
                         log.innerHTML += `\n[RESULT] ${data.execution_result}`;
                     }
+
+                    // --- START FAST POLLING (500ms) ---
+                    if (data.execution_result === "Awaiting admin approval") {
+                        const logsRes = await fetch('/api/logs');
+                        const logs = await logsRes.json();
+                        if (logs.length > 0) {
+                            lastKnownLogTime = logs[0].timestamp; 
+                            lastKnownStatus = "Pending Approval";
+                            pollInterval = setInterval(watchForUpdates, 500); // FASTER POLLING
+                        }
+                    }
                 }
                 log.scrollTop = log.scrollHeight;
                 
@@ -145,8 +156,65 @@
                 log.innerHTML += `\n[FATAL] Connection Failed: ${err}`;
             }
         }
+
+        async function watchForUpdates() {
+            const log = document.getElementById('console-log');
+            try {
+                const res = await fetch('/api/logs');
+                const logs = await res.json();
+                
+                if (logs.length === 0) return;
+
+                const topLog = logs[0];
+
+                // --- SCENARIO 1: The logs are the same, but status changed to Rejected ---
+                // This catches the exact moment you click "Reject" before the retry finishes
+                if (topLog.timestamp === lastKnownLogTime && topLog.status === 'Rejected' && !retryMessagePrinted) {
+                    log.innerHTML += `<br> <span style="color:#ffff55;">> Model retrying...</span>`; 
+                    retryMessagePrinted = true;
+                    lastKnownStatus = 'Rejected';
+                    log.scrollTop = log.scrollHeight;
+                }
+
+                // --- SCENARIO 2: A NEW log has appeared (The Retry Decision) ---
+                else if (topLog.timestamp !== lastKnownLogTime) {
+                    
+                    // If we somehow missed the "Rejected" state update because it was too fast,
+                    // check if the 2nd log is rejected.
+                    if (logs.length > 1 && logs[1].status === 'Rejected' && !retryMessagePrinted) {
+                        log.innerHTML += `<br> <span style="color:#ffff55;">> Model retrying...</span>`;
+                        retryMessagePrinted = true;
+                    }
+
+                    // Print the NEW decision
+                    log.innerHTML += `\n[AI RETRY] Tool: ${topLog.action}`;
+                    log.innerHTML += `\n[AI REASONING] "${topLog.thought}"`;
+                    log.innerHTML += `\n[RESULT] ${topLog.status === 'Executed' ? 'Executed successfully' : 'Awaiting admin approval'}`;
+                    log.scrollTop = log.scrollHeight;
+
+                    // Update trackers
+                    lastKnownLogTime = topLog.timestamp;
+                    lastKnownStatus = topLog.status;
+                    retryMessagePrinted = false; // Reset for potential future retries
+
+                    // If the retry succeeded, stop polling. If it's pending again, keep polling.
+                    if (topLog.status === 'Executed') {
+                        clearInterval(pollInterval);
+                    }
+                }
+
+                // --- SCENARIO 3: Approved ---
+                else if (topLog.status === 'Executed' && topLog.timestamp === lastKnownLogTime && lastKnownStatus === 'Pending Approval') {
+                    log.innerHTML += `<br> <span style="color:#00ff00;">> Admin Approved. Action Executed.</span>`;
+                    log.scrollTop = log.scrollHeight;
+                    clearInterval(pollInterval);
+                }
+
+            } catch (e) {
+                console.error("Polling error", e);
+            }
+        }
         
-        // Initialize
         loadProblems();
     </script>
 </body>
