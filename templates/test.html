@@ -266,65 +266,66 @@
             log.scrollTop = log.scrollHeight;
 
             while (autoSim) {
-            try {
-                const { problems, active } = await getProblemsAndActive();
+                try {
+                    const { problems, active } = await getProblemsAndActive();
 
-                const problemId = pickRandomProblem(problems, active);
-                if (!problemId) {
-                log.innerHTML += `<br><span>[AUTO] No problems available to inject</span>`;
-                await sleep(1000);
-                continue;
+                    const problemId = pickRandomProblem(problems, active);
+                    if (!problemId) {
+                    log.innerHTML += `<br><span>[AUTO] No problems available to inject</span>`;
+                    await sleep(1000);
+                    continue;
+                    }
+
+                    const problemName = problems[problemId]?.name ?? problemId;
+                    log.innerHTML += `<br><br><span style="color:#ff5555; font-weight:bold;">> [AUTO] Injecting fault: ${problemName} (${problemId})</span>`;
+                    log.scrollTop = log.scrollHeight;
+
+                    const triggerRes = await fetch('/api/trigger_scenario', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({problem: problemId})
+                    });
+                    const triggerData = await triggerRes.json();
+
+                    if (triggerData.error) {
+                    log.innerHTML += `<br>[AUTO ERROR] ${triggerData.error}`;
+                    log.scrollTop = log.scrollHeight;
+                    await sleep(800);
+                    continue;
+                    } else {
+                    const decisionTool = triggerData.decision?.tool ?? 'N/A';
+                    const decisionThought = triggerData.decision?.thought ?? '';
+                    const executionResult = triggerData.execution_result ?? '';
+
+                    log.innerHTML += `<br>[AUTO DECISION] Tool: ${decisionTool}`;
+                    log.innerHTML += `<br>[AUTO REASON] "${decisionThought}"`;
+                    log.innerHTML += `<br>[AUTO RESULT] ${executionResult}`;
+                    log.scrollTop = log.scrollHeight;
+                    }
+
+                    const resolved = await waitForResolution(problemId);
+
+                    if (!autoSim) {
+                    log.innerHTML += `<br><span style="color:#ffaa00;">> Auto-simulate stopped by user</span>`;
+                    autoStatus.textContent = 'Idle';
+                    break;
+                    }
+
+                    if (resolved) {
+                    log.innerHTML += `<br><span style="color:#00ff00;">> [AUTO] Problem resolved: ${problemName} (${problemId})</span>`;
+                    } else {
+                    log.innerHTML += `<br><span style="color:#ff4444;">> [AUTO] Stopped waiting for resolution of ${problemId}</span>`;
+                    }
+                    log.scrollTop = log.scrollHeight;
+
+                    await sleep(4000);
                 }
-
-                const problemName = problems[problemId]?.name ?? problemId;
-                log.innerHTML += `<br><br><span style="color:#ff5555; font-weight:bold;">> [AUTO] Injecting fault: ${problemName} (${problemId})</span>`;
-                log.scrollTop = log.scrollHeight;
-
-                const triggerRes = await fetch('/api/trigger_scenario', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({problem: problemId})
-                });
-                const triggerData = await triggerRes.json();
-
-                if (triggerData.error) {
-                log.innerHTML += `<br>[AUTO ERROR] ${triggerData.error}`;
-                log.scrollTop = log.scrollHeight;
-                await sleep(800);
-                continue;
-                } else {
-                const decisionTool = triggerData.decision?.tool ?? 'N/A';
-                const decisionThought = triggerData.decision?.thought ?? '';
-                const executionResult = triggerData.execution_result ?? '';
-
-                log.innerHTML += `<br>[AUTO DECISION] Tool: ${decisionTool}`;
-                log.innerHTML += `<br>[AUTO REASON] "${decisionThought}"`;
-                log.innerHTML += `<br>[AUTO RESULT] ${executionResult}`;
-                log.scrollTop = log.scrollHeight;
+                catch (e) {
+                    console.error("Auto-simulate loop error", e);
+                    log.innerHTML += `<br>[AUTO WARNING] Request failed, retrying...`;
+                    await sleep(2000);
+                    continue;
                 }
-
-                const resolved = await waitForResolution(problemId);
-
-                if (!autoSim) {
-                log.innerHTML += `<br><span style="color:#ffaa00;">> Auto-simulate stopped by user</span>`;
-                autoStatus.textContent = 'Idle';
-                break;
-                }
-
-                if (resolved) {
-                log.innerHTML += `<br><span style="color:#00ff00;">> [AUTO] Problem resolved: ${problemName} (${problemId})</span>`;
-                } else {
-                log.innerHTML += `<br><span style="color:#ff4444;">> [AUTO] Stopped waiting for resolution of ${problemId}</span>`;
-                }
-                log.scrollTop = log.scrollHeight;
-
-                await sleep(4000);
-            } catch (e) {
-                console.error("Auto-simulate loop error", e);
-                log.innerHTML += `<br>[AUTO EXCEPTION] ${e}`;
-                log.scrollTop = log.scrollHeight;
-                await sleep(5000);
-            }
             }
 
             autoStatus.textContent = 'Idle';
