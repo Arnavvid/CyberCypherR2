@@ -4,7 +4,6 @@ from . import tools
 
 def get_agent_decision(excluded_tools=None):
     """
-    Step 1: Observe and Reason.
     Returns the decision (JSON) but DOES NOT execute the tool.
     Accepts excluded_tools to prevent re-selecting rejected actions.
     """
@@ -22,7 +21,6 @@ def get_agent_decision(excluded_tools=None):
 
 def execute_tool(tool_name):
     """
-    Step 2: Execute the tool.
     Only called if risk is low OR admin approves.
     """
     if tool_name in tools.AVAILABLE_TOOLS:
