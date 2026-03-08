@@ -56,8 +56,7 @@
     </div>
 
     <script>
-        // --- Configuration ---
-        const MAX_DATA_POINTS = 20; // Keeps graph clean (Scroller limit)
+        const MAX_DATA_POINTS = 20; // Scroller limit.
 
         const commonOptions = { 
             animation: false, 
@@ -65,18 +64,17 @@
             scales: { 
                 x: { 
                     display: true, 
-                    ticks: { color: '#666', maxTicksLimit: 10 } // Prevents text crowding
+                    ticks: { color: '#666', maxTicksLimit: 10 }
                 }, 
                 y: { 
                     grid: { color: '#333' },
                     ticks: { color: '#888' }
                 } 
             },
-            elements: { point: { radius: 0 } }, // Clean line without dots
-            plugins: { legend: { display: false } } // Hide legend title to save space
+            elements: { point: { radius: 0 } },
+            plugins: { legend: { display: false } }
         };
 
-        // --- Chart Initialization ---
         const mkChart = (id, label, color, max) => new Chart(document.getElementById(id), {
             type: 'line',
             data: { 
@@ -99,20 +97,17 @@
             throughput: mkChart('throughputChart', 'Mbps', '#f1c40f', 1000)
         };
 
-        // --- Main Update Loop ---
         async function updateStatus() {
             try {
                 const res = await fetch('/api/status');
                 const data = await res.json();
                 
-                // Get clean time string (HH:MM:SS) to save space
                 const now = new Date().toLocaleTimeString('en-US', { hour12: false });
 
                 updateGraph(charts.latency, now, data.latency, 50, '#ff0040', '#00d2ff');
                 updateGraph(charts.loss, now, data.packet_loss, 2, '#ff0040', '#ff00ff');
                 updateGraph(charts.throughput, now, data.throughput, 5000, '#ff0040', '#f1c40f');
 
-                // Update Health & Badge
                 const hb = document.getElementById('healthBar');
                 if(data.device_health === "Critical") { 
                     hb.style.width = "25%"; hb.style.backgroundColor = "#ff0040"; hb.innerText = "CRITICAL FAILURE"; 
@@ -128,22 +123,18 @@
             }
         }
 
-        // --- The Fixed Scrolling Logic ---
         function updateGraph(chart, label, value, threshold, badColor, goodColor) {
             const labels = chart.data.labels;
             const dataPoints = chart.data.datasets[0].data;
 
-            // 1. Add new data
             labels.push(label);
             dataPoints.push(value);
 
-            // 2. Remove old data if we exceed the limit (Scrolling effect)
             if (labels.length > MAX_DATA_POINTS) {
-                labels.shift();      // Remove first label
-                dataPoints.shift();  // Remove first data point
+                labels.shift();
+                dataPoints.shift();
             }
 
-            // 3. Dynamic Coloring
             chart.data.datasets[0].borderColor = (value > threshold) ? badColor : goodColor;
             
             chart.update();

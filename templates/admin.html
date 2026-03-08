@@ -93,17 +93,13 @@
             logs.forEach(log => {
                 const row = document.createElement('tr');
                 
-                // Risk Coloring
                 let riskClass = 'risk-low';
                 if(log.risk > 40) riskClass = 'risk-med';
                 if(log.risk > 70) riskClass = 'risk-high';
 
-                // --- STATUS BADGE LOGIC ---
                 let statusClass = log.status === 'Executed' ? 'status-executed' : 'status-pending';
-                // Wrap status text in a styled span
                 let statusBadge = `<span class="status-badge ${statusClass}">${log.status}</span>`;
 
-                // --- APPROVE BUTTON LOGIC ---
                 let actionButton = '';
                 if (log.status === 'Pending Approval') {
                     actionButton = `
@@ -138,7 +134,7 @@
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({tool: tool})
             });
-            fetchLogs(); // Refresh immediately
+            fetchLogs();
         }
 
         setInterval(fetchLogs, 1000);

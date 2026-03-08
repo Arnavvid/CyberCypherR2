@@ -112,10 +112,8 @@
         async function runScenario(problemId, problemName) {
             const log = document.getElementById('console-log');
             
-            // Stop any previous polling
             if (pollInterval) clearInterval(pollInterval);
-            retryMessagePrinted = false; // Reset flag
-
+            retryMessagePrinted = false;
             log.innerHTML += `<br><br> <span style="color:#ff5555; font-weight:bold;">> Injecting fault: ${problemName}...</span>`; 
             log.innerHTML += `<br> <span style="color:#ffff55;">> Gathering JSON Telemetry...</span>`;
             log.scrollTop = log.scrollHeight;
@@ -139,14 +137,13 @@
                         log.innerHTML += `\n[RESULT] ${data.execution_result}`;
                     }
 
-                    // --- START FAST POLLING (500ms) ---
                     if (data.execution_result === "Awaiting admin approval") {
                         const logsRes = await fetch('/api/logs');
                         const logs = await logsRes.json();
                         if (logs.length > 0) {
                             lastKnownLogTime = logs[0].timestamp; 
                             lastKnownStatus = "Pending Approval";
-                            pollInterval = setInterval(watchForUpdates, 500); // FASTER POLLING
+                            pollInterval = setInterval(watchForUpdates, 500);
                         }
                     }
                 }
@@ -168,7 +165,6 @@
                 const topLog = logs[0];
 
                 // --- SCENARIO 1: The logs are the same, but status changed to Rejected ---
-                // This catches the exact moment you click "Reject" before the retry finishes
                 if (topLog.timestamp === lastKnownLogTime && topLog.status === 'Rejected' && !retryMessagePrinted) {
                     log.innerHTML += `<br> <span style="color:#ffff55;">> Model retrying...</span>`; 
                     retryMessagePrinted = true;
@@ -179,25 +175,20 @@
                 // --- SCENARIO 2: A NEW log has appeared (The Retry Decision) ---
                 else if (topLog.timestamp !== lastKnownLogTime) {
                     
-                    // If we somehow missed the "Rejected" state update because it was too fast,
-                    // check if the 2nd log is rejected.
                     if (logs.length > 1 && logs[1].status === 'Rejected' && !retryMessagePrinted) {
                         log.innerHTML += `<br> <span style="color:#ffff55;">> Model retrying...</span>`;
                         retryMessagePrinted = true;
                     }
 
-                    // Print the NEW decision
                     log.innerHTML += `\n[AI RETRY] Tool: ${topLog.action}`;
                     log.innerHTML += `\n[AI REASONING] "${topLog.thought}"`;
                     log.innerHTML += `\n[RESULT] ${topLog.status === 'Executed' ? 'Executed successfully' : 'Awaiting admin approval'}`;
                     log.scrollTop = log.scrollHeight;
 
-                    // Update trackers
                     lastKnownLogTime = topLog.timestamp;
                     lastKnownStatus = topLog.status;
-                    retryMessagePrinted = false; // Reset for potential future retries
+                    retryMessagePrinted = false;
 
-                    // If the retry succeeded, stop polling. If it's pending again, keep polling.
                     if (topLog.status === 'Executed') {
                         clearInterval(pollInterval);
                     }
