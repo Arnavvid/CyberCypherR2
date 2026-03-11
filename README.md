@@ -1,11 +1,11 @@
-# CyberCypher: Autonomous Network Remediation Agent
+# Autonomous Network Remediation Agent
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-2.0+-green.svg)
 ![Ollama](https://img.shields.io/badge/AI-Ollama-orange.svg)
 ![ChromaDB](https://img.shields.io/badge/VectorDB-Chroma-purple.svg)
 
-CyberCypher is a self-healing network operations system that utilizes Generative AI and Chaos Engineering to simulate, detect, diagnose, and resolve network failures in real-time.
+A self-healing network operations system that utilizes Generative AI and Chaos Engineering to simulate, detect, diagnose, and resolve network failures in real-time.
 
 It features a Retrieval-Augmented Generation (RAG) engine to learn from historical data and a Human-in-the-Loop approval system for high-risk interventions.
 
